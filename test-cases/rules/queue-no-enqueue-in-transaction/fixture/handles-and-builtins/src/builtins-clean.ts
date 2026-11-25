@@ -26,8 +26,11 @@ export class ItemRunner {
       const localSep = '-'
       for (const id of ids) {
         seen.add(id)
-        byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', localSep))
+        byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', localSep).replace(/x/, `a-${sep}`))
       }
+      const repeatIds = rows.map(extractId)
+      const typedQueryRef = query<{ id: string }>
+      const instantiatedUtil = (defaultUtils<{ id: string }>)('x')
       const parsedNum = parseInt('10', 10)
       const localIds = getLocalRows().map(r => r.id)
       const fetchedLabels = fetchLabels().map((label: string) => label.trim())
@@ -52,6 +55,9 @@ export class ItemRunner {
       return {
         count,
         parsedNum,
+        repeatIds,
+        typedQueryRef,
+        instantiatedUtil,
         parsed,
         filteredPayload,
         raw,

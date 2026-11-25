@@ -84,10 +84,15 @@ fn unresolved_transaction_site(
     imports: &FxHashMap<&str, &ImportedBinding>,
 ) -> bool {
     let (mods, txs) = (&ctx.targets.transaction_modules, &ctx.targets.transactions);
-    if site.returned_from.iter().any(|(m, e)| mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())))
-        || site.returned_member_from.iter().any(|(m, e, _)| mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())))
-    {
-        return true;
+    for (m, e) in &site.returned_from {
+        if mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())) {
+            return true;
+        }
+    }
+    for (m, e, _) in &site.returned_member_from {
+        if mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())) {
+            return true;
+        }
     }
     let Some(binding) = call.and_then(|c| root_ident(&c.callee)).and_then(|name| imports.get(name)) else {
         return false;

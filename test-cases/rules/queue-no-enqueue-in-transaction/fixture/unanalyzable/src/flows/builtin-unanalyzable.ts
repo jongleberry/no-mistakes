@@ -1,16 +1,22 @@
-import { transaction } from "@sample/database";
-import { createQueue } from "@sample/jobs";
+import { createDb, transaction } from "@sample/database";
+import { createQueue, enqueue } from "@sample/jobs";
+import type { Queue } from "@sample/jobs";
 import * as jobsNs from "@sample/jobs";
 import { enqueue as starEnqueue, queue as starQueue } from "../jobs-star";
 
 declare const method: string;
+declare const flag: boolean;
 declare const rows: { id: string }[];
 declare const unknownJobs: Record<string, (job: { receiptId: string }) => Promise<void>>;
 declare const unknownQueues: Record<string, { add: (job: { receiptId: string }) => Promise<void> }>;
+declare const typedQueue: Queue;
 declare const callbacks: [(row: { id: string }) => unknown];
 declare function getCallback(): (row: { id: string }) => unknown;
+function localFallback(_job: { receiptId: string }) {}
 
 const publisherQueue = createQueue();
+const opaqueTx = createDb();
+await opaqueTx("write", () => {});
 
 await transaction("write", async (tx: (sql: string) => Promise<void>) => {
   rows.map((r) => unknownJobs[method]({ receiptId: r.id }));
@@ -19,6 +25,10 @@ await transaction("write", async (tx: (sql: string) => Promise<void>) => {
   await starQueue.add({ receiptId: "star-member" });
   await unknownQueues[method].add({ receiptId: "dynamic-receiver" });
   await publisherQueue.add({ receiptId: "publisher-factory" });
+  await publisherQueue.publish({ receiptId: "non-builtin-member" });
+  await typedQueue.add({ receiptId: "typed-publisher" });
+  await (flag ? localFallback : enqueue)({ receiptId: "known-ambiguous" });
+  `${starQueue.id}`.trim();
   rows.map(getCallback());
   rows.map(...callbacks);
   rows.map(function* (r) {

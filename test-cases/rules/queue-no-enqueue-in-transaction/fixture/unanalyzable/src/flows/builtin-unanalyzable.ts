@@ -1,6 +1,6 @@
 import { createDb, transaction } from "@sample/database";
 import { createQueue, enqueue } from "@sample/jobs";
-import type { Queue } from "@sample/jobs";
+import type { Queue, QueueAdder } from "@sample/jobs";
 import * as jobsNs from "@sample/jobs";
 import { enqueue as starEnqueue, queue as starQueue } from "../jobs-star";
 
@@ -53,9 +53,13 @@ export function unprovableLocalCallback(
   items: { id: string }[],
   opaqueCallback: (row: { id: string }) => unknown,
   typedQueue: Queue,
+  typedNsQueue: jobsNs.Queue,
+  typedHolder: { add: QueueAdder },
 ) {
   return transaction("write", async () => {
     items.map(opaqueCallback);
     await typedQueue.add({ receiptId: "typed-publisher" });
+    await typedNsQueue.add({ receiptId: "typed-ns-publisher" });
+    await typedHolder.add({ receiptId: "typed-member-publisher" });
   });
 }

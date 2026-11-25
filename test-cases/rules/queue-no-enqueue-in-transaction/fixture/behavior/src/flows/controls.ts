@@ -4,7 +4,8 @@ import { enqueue as previewEnqueue } from "@sample/preview";
 
 function afterCommit(_callback: () => Promise<void>) {}
 
-await transaction("write", async () => {
+await transaction("write", async (tx: { insertReceipt: () => Promise<string> }) => {
+  await tx.insertReceipt();
   await previewEnqueue({ receiptId: "preview" });
   afterCommit(async () => {
     await enqueue({ receiptId: "deferred" });

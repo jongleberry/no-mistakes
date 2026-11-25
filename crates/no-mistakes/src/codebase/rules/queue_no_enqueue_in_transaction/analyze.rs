@@ -2,11 +2,11 @@ use super::builtins;
 use super::callbacks::CallbackWalk;
 use super::options::{Api, Targets};
 use super::receivers::{classify_builtin_site, is_callback_param_handle, FileEnv};
-use super::transactions::collect_tx_callbacks;
+use super::transactions::{collect_tx_callbacks, specifier_reaches_module};
 use super::{finding, unanalyzable};
 use crate::codebase::check_facts::CheckFactMap;
 use crate::codebase::dependencies::extract::{
-    CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression,
+    CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression, ValueType,
 };
 use crate::codebase::dependencies::graph::{
     DepGraph, KnownCallTargetRef, ResolvedCallSite, ResolvedCallTarget, TsFactLookup,
@@ -65,6 +65,15 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
         callback_params: flow.parameters.iter()
             .filter(|p| tx_callbacks.contains(&p.owner) && p.invalidated_at.is_none())
             .map(|p| (p.owner, p.scope, p.name.as_str())).collect(),
+        publisher_typed_params: flow.parameters.iter()
+            .filter(|p| matches!(&p.type_reference, Some(ValueType::Reference(name)) if {
+                let root = name.split_once('.').map_or(name.as_str(), |(root, _)| root);
+                file_facts.imported_bindings.iter().any(|b| {
+                    b.local == root
+                        && specifier_reaches_module(ctx, file, &b.specifier, &ctx.targets.publisher_modules)
+                })
+            }))
+            .map(|p| (p.scope, p.name.as_str())).collect(),
         local_bindings: flow.bindings.iter()
             .filter(|b| b.immutable && b.invalidated_at.is_none())
             .map(|b| ((b.scope, b.name.as_str()), &b.value)).collect(),

@@ -295,7 +295,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "items.map",
-          "line": 58,
+          "line": 60,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "items.map(opaqueCallback);",
@@ -389,6 +389,33 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await starQueue.add({ receiptId: \"star-member\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedHolder.add",
+          "line": 63,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedHolder.add({ receiptId: \"typed-member-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedNsQueue.add",
+          "line": 62,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedNsQueue.add({ receiptId: \"typed-ns-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedQueue.add",
+          "line": 61,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedQueue.add({ receiptId: \"typed-publisher\" });",
           "target": "unanalyzable"
         },
         {
@@ -606,7 +633,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "items.map",
-          "line": 58,
+          "line": 60,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "items.map(opaqueCallback);",
@@ -700,6 +727,33 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await starQueue.add({ receiptId: \"star-member\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedHolder.add",
+          "line": 63,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedHolder.add({ receiptId: \"typed-member-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedNsQueue.add",
+          "line": 62,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedNsQueue.add({ receiptId: \"typed-ns-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "typedQueue.add",
+          "line": 61,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await typedQueue.add({ receiptId: \"typed-publisher\" });",
           "target": "unanalyzable"
         },
         {

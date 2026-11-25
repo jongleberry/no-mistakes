@@ -18,6 +18,7 @@ pub(super) struct FileEnv<'a> {
     pub(super) sites_by_key: FxHashMap<CallKey<'a>, Vec<&'a ResolvedCallSite>>,
     pub(super) builtin_construct_offsets: FxHashSet<u32>,
     pub(super) callback_params: FxHashSet<(CallableId, usize, &'a str)>,
+    pub(super) publisher_typed_params: FxHashSet<(usize, &'a str)>,
     pub(super) local_bindings: FxHashMap<(usize, &'a str), &'a ValueExpression>,
     pub(super) local_callables: FxHashMap<(usize, &'a str), CallableId>,
 }
@@ -92,17 +93,11 @@ pub(super) fn classify_builtin_site(
 
 fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) -> bool {
     let mods = &env.ctx.targets.publisher_modules;
-    for (m, _, _) in &site.returned_member_from {
-        if specifier_reaches_module(env.ctx, env.file, m, mods) {
-            return true;
-        }
-    }
-    for (m, _) in &site.typed_from {
-        if specifier_reaches_module(env.ctx, env.file, m, mods) {
-            return true;
-        }
-    }
-    false
+    site.returned_member_from
+        .iter()
+        .map(|(m, _, _)| m.as_str())
+        .chain(site.typed_from.iter().map(|(m, _)| m.as_str()))
+        .any(|m| specifier_reaches_module(env.ctx, env.file, m, mods))
 }
 
 fn is_local_or_builtin_receiver(
@@ -114,7 +109,8 @@ fn is_local_or_builtin_receiver(
 ) -> bool {
     match expr {
         ValueExpression::Named { name, scope: Some(scope), .. } => {
-            *scope != 0 || !env.imports.contains_key(name.as_str())
+            !env.publisher_typed_params.contains(&(*scope, name.as_str()))
+                && (*scope != 0 || !env.imports.contains_key(name.as_str()))
         }
         ValueExpression::Named { name, scope: None, .. } => {
             !env.imports.contains_key(name.as_str())

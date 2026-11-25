@@ -82,11 +82,9 @@ pub(super) fn global_static_call(object: &str, method: &str) -> Option<BuiltinCa
 
 pub(super) fn global_target_callbacks(name: &str) -> Option<BuiltinCall> {
     let trimmed = name
-        .strip_prefix("globalThis.")
-        .or_else(|| name.strip_prefix("window."))
-        .or_else(|| name.strip_prefix("self."))
-        .or_else(|| name.strip_prefix("global."))
-        .unwrap_or(name);
+        .split_once('.')
+        .filter(|(root, _)| matches!(*root, "globalThis" | "window" | "self" | "global"))
+        .map_or(name, |(_, rest)| rest);
     let (object, method) = trimmed.split_once('.')?;
     global_static_call(object, method).filter(|call| !call.callbacks.is_empty())
 }

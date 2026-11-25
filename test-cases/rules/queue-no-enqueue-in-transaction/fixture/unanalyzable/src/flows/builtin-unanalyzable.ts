@@ -25,4 +25,14 @@ await transaction("write", async (tx: (sql: string) => Promise<void>) => {
   let handle = tx;
   handle = unknownJobs[method] as unknown as typeof tx;
   await handle("SELECT 1");
+  (null as unknown as { add(): void }).add();
 });
+
+export function unprovableLocalCallback(
+  items: { id: string }[],
+  opaqueCallback: (row: { id: string }) => unknown,
+) {
+  return transaction("write", async () => {
+    items.map(opaqueCallback);
+  });
+}

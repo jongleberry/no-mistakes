@@ -82,6 +82,9 @@ impl ImportCollector {
             Expression::TSNonNullExpression(assertion) => {
                 self.value_expression(&assertion.expression)
             }
+            Expression::TSInstantiationExpression(instantiation) => {
+                self.value_expression(&instantiation.expression)
+            }
             Expression::CallExpression(call) => self
                 .object_assign_result(call)
                 .unwrap_or(ValueExpression::Call(call.span.start, call.span.end)),

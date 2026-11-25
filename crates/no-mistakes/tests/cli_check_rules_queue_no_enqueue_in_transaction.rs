@@ -5,6 +5,7 @@ const RULE: &str = "queue-no-enqueue-in-transaction";
 #[test]
 fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let root = rules_path(RULE, "fixture", "behavior");
+    let handles = rules_path(RULE, "fixture", "handles-and-builtins");
     let incomplete = rules_path(RULE, "fixture", "incomplete");
     let unanalyzable = rules_path(RULE, "fixture", "unanalyzable");
     let directive_audit = rules_path(RULE, "fixture", "directive-audit");
@@ -13,6 +14,11 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
         &[
             ("configured", root.clone(), root.join(".no-mistakes.yml")),
             ("default_off", root.clone(), root.join("default.yml")),
+            (
+                "handles_and_builtins",
+                handles.clone(),
+                handles.join(".no-mistakes.yml"),
+            ),
             (
                 "incomplete",
                 incomplete.clone(),
@@ -69,6 +75,35 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let default = &reports["default_off"];
     assert_eq!(default["exitCode"], 0);
     assert_eq!(default["report"]["rules"], serde_json::json!([]));
+
+    let handles = &reports["handles_and_builtins"];
+    assert_eq!(handles["exitCode"], 1);
+    assert_eq!(handles["report"]["advisories"], serde_json::json!([]));
+    let handle_findings = handles["report"]["rules"].as_array().unwrap();
+    let mut handle_locations: Vec<_> = handle_findings
+        .iter()
+        .map(|finding| {
+            assert_eq!(finding["rule"], RULE);
+            assert_eq!(finding["target"], "@sample/jobs#enqueue");
+            (
+                finding["file"].as_str().unwrap(),
+                finding["line"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    handle_locations.sort_unstable();
+    assert_eq!(
+        handle_locations,
+        [
+            ("src/map-enqueue.ts", 5),
+            ("src/map-enqueue.ts", 7),
+            ("src/map-enqueue.ts", 8),
+            ("src/map-enqueue.ts", 9),
+            ("src/map-enqueue.ts", 11),
+            ("src/map-enqueue.ts", 12),
+            ("src/map-enqueue.ts", 13),
+        ]
+    );
     let incomplete = &reports["incomplete"]["report"];
     let failures = incomplete["incomplete"].as_array().unwrap();
     assert!(failures

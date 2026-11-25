@@ -1,0 +1,182 @@
+use super::analyze::{exact_target, CallKey, Context};
+use super::builtins::{self, BuiltinCall};
+use super::transactions::specifier_reaches_module;
+use crate::codebase::dependencies::extract::{
+    CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression,
+};
+use crate::codebase::dependencies::graph::{ResolvedCallSite, ResolvedCallTarget};
+use crate::codebase::ts_source::facts::TsFileFacts;
+use crate::fx::{FxHashMap, FxHashSet};
+use std::path::Path;
+
+pub(super) struct FileEnv<'a> {
+    pub(super) ctx: &'a Context<'a>,
+    pub(super) file: &'a Path,
+    pub(super) file_facts: &'a TsFileFacts,
+    pub(super) imports: FxHashMap<&'a str, &'a ImportedBinding>,
+    pub(super) calls_by_span: FxHashMap<(u32, u32), &'a ValueCall>,
+    pub(super) sites_by_key: FxHashMap<CallKey<'a>, Vec<&'a ResolvedCallSite>>,
+    pub(super) builtin_construct_offsets: FxHashSet<u32>,
+    pub(super) callback_params: FxHashSet<(CallableId, usize, &'a str)>,
+    pub(super) local_bindings: FxHashMap<(usize, &'a str), &'a ValueExpression>,
+    pub(super) local_callables: FxHashMap<(usize, &'a str), CallableId>,
+}
+
+impl FileEnv<'_> {
+    pub(super) fn is_tagged(&self, call: &ValueCall) -> bool {
+        self.file_facts
+            .value_flow
+            .tagged_templates
+            .contains_key(&(call.offset, call.end))
+    }
+
+    pub(super) fn local_callable(&self, scope: usize, name: &str) -> Option<CallableId> {
+        self.local_callables.get(&(scope, name)).copied()
+    }
+}
+
+pub(super) fn is_callback_param_handle(
+    call: Option<&ValueCall>,
+    tx_owner: CallableId,
+    params: &FxHashSet<(CallableId, usize, &str)>,
+) -> bool {
+    call.is_some_and(|c| is_param_expr(&c.callee, tx_owner, params))
+}
+
+pub(super) fn is_param_expr(
+    mut receiver: &ValueExpression,
+    tx_owner: CallableId,
+    params: &FxHashSet<(CallableId, usize, &str)>,
+) -> bool {
+    while let ValueExpression::Member(inner, _) = receiver {
+        receiver = inner.as_ref();
+    }
+    matches!(
+        receiver,
+        ValueExpression::Named { name, scope: Some(scope), .. }
+            if params.contains(&(tx_owner, *scope, name.as_str()))
+    )
+}
+
+pub(super) fn classify_builtin_site(
+    env: &FileEnv<'_>,
+    site: &ResolvedCallSite,
+    call: Option<&ValueCall>,
+    tx_owner: CallableId,
+    depth: u8,
+) -> Option<BuiltinCall> {
+    if depth > 8 {
+        return None;
+    }
+    let call = call?;
+    let ValueExpression::Member(receiver, method) = &call.callee else {
+        return None;
+    };
+    if env.is_tagged(call) {
+        return matches!(
+            receiver.as_ref(),
+            ValueExpression::Named { name, scope: None, .. }
+                if name == "String" && method == "raw" && !env.imports.contains_key("String")
+        )
+        .then(|| builtins::global_static_call("String", "raw"))
+        .flatten();
+    }
+    if let ValueExpression::Named { name, scope: None, .. } = receiver.as_ref() {
+        if !env.imports.contains_key(name.as_str()) {
+            return builtins::global_static_call(name, method);
+        }
+    }
+    let builtin = builtins::proto_method_call(method)?;
+    if returned_or_typed_from_publisher(env, site) {
+        return None;
+    }
+    is_local_or_builtin_receiver(env, receiver, call.offset, tx_owner, depth + 1)
+        .then_some(builtin)
+}
+
+fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) -> bool {
+    let mods = &env.ctx.targets.publisher_modules;
+    let reaches = |spec: &str| specifier_reaches_module(env.ctx, env.file, spec, mods);
+    site.returned_from.iter().any(|(m, _)| reaches(m))
+        || site.returned_member_from.iter().any(|(m, _, _)| reaches(m))
+        || site.typed_from.iter().any(|(m, _)| reaches(m))
+}
+
+fn is_local_or_builtin_receiver(
+    env: &FileEnv<'_>,
+    expr: &ValueExpression,
+    call_offset: u32,
+    tx_owner: CallableId,
+    depth: u8,
+) -> bool {
+    if depth > 8 {
+        return false;
+    }
+    match expr {
+        ValueExpression::Named { name, scope: Some(scope), .. } => {
+            *scope != 0 || !env.imports.contains_key(name.as_str())
+        }
+        ValueExpression::Named { name, scope: None, .. } => {
+            !env.imports.contains_key(name.as_str())
+                && builtins::GLOBAL_STATIC_OBJECTS.contains(&name.as_str())
+        }
+        ValueExpression::Member(inner, _) => {
+            matches!(inner.as_ref(), ValueExpression::Named { name, scope: None, .. } if name == "this")
+                || is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth + 1)
+        }
+        ValueExpression::Array(..) => true,
+        ValueExpression::Awaited(inner) => {
+            is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth + 1)
+        }
+        ValueExpression::Nullish(left, right)
+        | ValueExpression::Default(left, right)
+        | ValueExpression::Either(left, right) => {
+            [left.as_ref(), right.as_ref()].into_iter().all(|arm| {
+                matches!(arm, ValueExpression::Null | ValueExpression::Undefined)
+                    || is_local_or_builtin_receiver(env, arm, call_offset, tx_owner, depth + 1)
+            })
+        }
+        ValueExpression::Derived(parts) => !parts.iter().any(|p| expr_is_import(p, &env.imports)),
+        ValueExpression::Call(start, end) => inner_call_is_clean(env, *start, *end, tx_owner, depth),
+        ValueExpression::Unknown => env.builtin_construct_offsets.contains(&call_offset),
+        _ => false,
+    }
+}
+
+fn inner_call_is_clean(
+    env: &FileEnv<'_>,
+    start: u32,
+    end: u32,
+    tx_owner: CallableId,
+    depth: u8,
+) -> bool {
+    let Some(inner_call) = env.calls_by_span.get(&(start, end)).copied() else {
+        return false;
+    };
+    if is_callback_param_handle(Some(inner_call), tx_owner, &env.callback_params) {
+        return true;
+    }
+    let Some(sites) = env.sites_by_key.get(&(inner_call.offset, inner_call.source_callee.as_str()))
+    else {
+        return false;
+    };
+    sites.iter().any(|site| {
+        site.invocation == InvocationKind::Call && match &site.target {
+            ResolvedCallTarget::RepositoryFunction { .. } | ResolvedCallTarget::Global { .. } => true,
+            ResolvedCallTarget::ModuleExport { .. } => {
+                exact_target(site).is_some_and(|api| !env.ctx.targets.publishers.contains(&api))
+            }
+            ResolvedCallTarget::Unknown => {
+                classify_builtin_site(env, site, Some(inner_call), tx_owner, depth + 1).is_some()
+            }
+            ResolvedCallTarget::Alternatives(_) => false,
+        }
+    })
+}
+
+fn expr_is_import(mut expr: &ValueExpression, imports: &FxHashMap<&str, &ImportedBinding>) -> bool {
+    while let ValueExpression::Member(inner, _) = expr {
+        expr = inner.as_ref();
+    }
+    matches!(expr, ValueExpression::Named { name, scope: None | Some(0), .. } if imports.contains_key(name.as_str()))
+}

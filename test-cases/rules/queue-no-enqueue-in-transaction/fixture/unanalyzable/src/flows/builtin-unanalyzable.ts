@@ -1,0 +1,28 @@
+import { transaction } from "@sample/database";
+import { createQueue } from "@sample/jobs";
+import { enqueue as starEnqueue, queue as starQueue } from "../jobs-star";
+
+declare const method: string;
+declare const rows: { id: string }[];
+declare const unknownJobs: Record<string, (job: { receiptId: string }) => Promise<void>>;
+declare const unknownQueues: Record<string, { add: (job: { receiptId: string }) => Promise<void> }>;
+declare const callbacks: [(row: { id: string }) => unknown];
+declare function getCallback(): (row: { id: string }) => unknown;
+
+const publisherQueue = createQueue();
+
+await transaction("write", async (tx: (sql: string) => Promise<void>) => {
+  rows.map((r) => unknownJobs[method]({ receiptId: r.id }));
+  rows.map(starEnqueue);
+  await starQueue.add({ receiptId: "star-member" });
+  await unknownQueues[method].add({ receiptId: "dynamic-receiver" });
+  await publisherQueue.add({ receiptId: "publisher-factory" });
+  rows.map(getCallback());
+  rows.map(...callbacks);
+  rows.map(function* (r) {
+    yield r.id;
+  });
+  let handle = tx;
+  handle = unknownJobs[method] as unknown as typeof tx;
+  await handle("SELECT 1");
+});

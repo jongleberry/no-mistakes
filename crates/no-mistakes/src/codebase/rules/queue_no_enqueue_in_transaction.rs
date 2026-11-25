@@ -6,6 +6,7 @@ use crate::codebase::ts_resolver::normalize_path;
 use crate::codebase::ts_source::relative_slash_path;
 use crate::config::v2::schema::NoMistakesConfig;
 use anyhow::Result;
+use rayon::prelude::*;
 use std::path::Path;
 
 mod analyze;
@@ -40,9 +41,17 @@ pub(crate) fn check(
             graph,
             facts,
         };
-        for file in files {
-            let file = normalize_path(&file);
-            analyze::check_file(&ctx, &file, &mut diagnostics);
+        let per_file: Vec<AnalysisDiagnostics> = files
+            .par_iter()
+            .map(|file| {
+                let mut local = AnalysisDiagnostics::default();
+                let file = normalize_path(file);
+                analyze::check_file(&ctx, &file, &mut local);
+                local
+            })
+            .collect();
+        for local in per_file {
+            diagnostics.append(local);
         }
     }
     diagnostics.findings.sort();

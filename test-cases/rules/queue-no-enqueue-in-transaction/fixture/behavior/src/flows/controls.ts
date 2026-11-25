@@ -40,6 +40,7 @@ async function runPreview() {
 const DeferredReceipt = await transaction("write", () => {
   return class ReceiptJob {
     queued = enqueue({ receiptId: "after-construction" });
+    tagged = enqueue`after-construction`;
   };
 });
 new DeferredReceipt();

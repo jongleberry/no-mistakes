@@ -151,6 +151,9 @@ impl ImportCollector {
         self.note_array_push(&value_call, true);
         self.note_closed_registry_call(call);
         self.record_finite_guard_call(call, self.value_flow.calls.len());
+        if self.deferred_field_owner == Some(value_call.context) {
+            self.value_flow.deferred_calls.insert(value_call.offset);
+        }
         self.value_flow.calls.push(value_call);
     }
 }

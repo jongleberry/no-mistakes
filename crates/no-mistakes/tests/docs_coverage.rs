@@ -337,6 +337,23 @@ fn vite_optimize_deps_nested_imports_documents_scope_options() {
 }
 
 #[test]
+fn transaction_enqueue_rule_is_documented_across_check_entry_points() {
+    let root = repo_root();
+    let rule = "queue-no-enqueue-in-transaction";
+    assert!(rule_ids_from_source(&root).contains(rule));
+    for path in [
+        "docs/rules/README.md",
+        "docs/configuration/rules.md",
+        "docs/cli/check.md",
+        "docs/node-api.md",
+        "docs/feature-parity.md",
+        "plugins/no-mistakes/skills/no-mistakes/SKILL.md",
+    ] {
+        assert!(read(&root.join(path)).contains(rule), "{path}");
+    }
+}
+
+#[test]
 fn postgres_lock_inventory_has_rule_command_and_node_documentation() {
     let root = repo_root();
     let rule = "postgres-lock-inventory";

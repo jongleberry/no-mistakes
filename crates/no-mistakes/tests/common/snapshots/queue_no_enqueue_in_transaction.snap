@@ -217,6 +217,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/shapes.ts",
+          "import": "starTransaction",
+          "line": 55,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await starTransaction`write ${() => enqueue({ receiptId: \"star-reexport-tagged-tx\" })}`;",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/shapes.ts",
           "import": "transaction",
           "line": 37,
           "message": "transaction call has a spread argument at or before the callback slot; pass arguments positionally with an inline callback",
@@ -362,6 +371,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await starTransaction(\"write\", () => enqueue({ receiptId: \"star-reexport-tx\" }));",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/shapes.ts",
+          "import": "starTransaction",
+          "line": 55,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await starTransaction`write ${() => enqueue({ receiptId: \"star-reexport-tagged-tx\" })}`;",
           "target": "unanalyzable"
         },
         {

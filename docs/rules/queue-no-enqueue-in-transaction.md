@@ -22,7 +22,10 @@ The transaction call must use a direct import binding so its argument positions
 can be proved, and the configured argument must be an inline arrow or
 non-generator function expression. The rule checks direct calls owned by that
 callback, including expression bodies, without proving whether a particular
-branch runs. A separate nested function, a deferred callback, or a deferred
+branch runs. Method calls and tagged template queries on the transaction
+callback's own parameter (such as `tx.insertReceipt()`, `` tx.sql`...` ``, or
+`` tx`...` ``) are treated as transaction-bound work rather than unanalyzable.
+A separate nested function, a deferred callback, or a deferred
 class instance field has its own body and runs outside the transaction callback.
 
 Shapes the rule cannot soundly prove are recorded as `unanalyzable` (never

@@ -4,13 +4,22 @@ import { enqueue as previewEnqueue } from "@sample/preview";
 
 function afterCommit(_callback: () => Promise<void>) {}
 
-await transaction("write", async (tx: { insertReceipt: () => Promise<string> }) => {
+type SqlTag = (strings: TemplateStringsArray, ...values: unknown[]) => Promise<unknown>;
+type TransactionHandle = {
+  insertReceipt: () => Promise<string>;
+  sql: SqlTag;
+};
+
+await transaction("write", async (tx: TransactionHandle) => {
   await tx.insertReceipt();
+  await tx.sql`INSERT INTO receipts (id) VALUES (${"member-tagged"})`;
   await previewEnqueue({ receiptId: "preview" });
   afterCommit(async () => {
     await enqueue({ receiptId: "deferred" });
   });
 });
+
+await transaction("write", async (tx: SqlTag) => tx`INSERT INTO receipts (id) VALUES (${"bare-tagged"})`);
 
 async function preview() {
   async function enqueue(_job: { receiptId: string }) {}

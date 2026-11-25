@@ -9,7 +9,6 @@ declare const flag: boolean;
 declare const rows: { id: string }[];
 declare const unknownJobs: Record<string, (job: { receiptId: string }) => Promise<void>>;
 declare const unknownQueues: Record<string, { add: (job: { receiptId: string }) => Promise<void> }>;
-declare const typedQueue: Queue;
 declare const callbacks: [(row: { id: string }) => unknown];
 declare function getCallback(): (row: { id: string }) => unknown;
 function localFallback(_job: { receiptId: string }) {}
@@ -26,8 +25,11 @@ await transaction("write", async (tx: (sql: string) => Promise<void>) => {
   await unknownQueues[method].add({ receiptId: "dynamic-receiver" });
   await publisherQueue.add({ receiptId: "publisher-factory" });
   await publisherQueue.publish({ receiptId: "non-builtin-member" });
-  await typedQueue.add({ receiptId: "typed-publisher" });
-  await (flag ? localFallback : enqueue)({ receiptId: "known-ambiguous" });
+  let chosen: (job: { receiptId: string }) => unknown = localFallback;
+  if (flag) {
+    chosen = enqueue;
+  }
+  await chosen({ receiptId: "known-ambiguous" });
   `${starQueue.id}`.trim();
   rows.map(getCallback());
   rows.map(...callbacks);
@@ -50,8 +52,10 @@ await transaction("write", async (tx: (sql: string) => Promise<void>) => {
 export function unprovableLocalCallback(
   items: { id: string }[],
   opaqueCallback: (row: { id: string }) => unknown,
+  typedQueue: Queue,
 ) {
   return transaction("write", async () => {
     items.map(opaqueCallback);
+    await typedQueue.add({ receiptId: "typed-publisher" });
   });
 }

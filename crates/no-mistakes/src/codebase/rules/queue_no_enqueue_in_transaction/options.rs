@@ -29,6 +29,7 @@ struct Publisher {
 
 pub(super) struct Targets<'a> {
     pub(super) transactions: FxHashMap<Api<'a>, usize>,
+    pub(super) transaction_modules: FxHashSet<&'a str>,
     pub(super) publishers: FxHashSet<Api<'a>>,
 }
 
@@ -38,18 +39,20 @@ impl Options {
             bail!("{RULE_ID}: options.transactions and options.publishers must both name at least one API");
         }
         let mut transactions = FxHashMap::default();
+        let mut transaction_modules = FxHashSet::default();
         for transaction in &self.transactions {
             let api = api(&transaction.module, &transaction.export, "transactions")?;
             if transactions.insert(api, transaction.callback_argument).is_some() {
                 bail!("{RULE_ID}: options.transactions lists `{}#{}` more than once", api.0, api.1);
             }
+            transaction_modules.insert(api.0);
         }
         let publishers = self
             .publishers
             .iter()
             .map(|publisher| api(&publisher.module, &publisher.export, "publishers"))
             .collect::<Result<_>>()?;
-        Ok(Targets { transactions, publishers })
+        Ok(Targets { transactions, transaction_modules, publishers })
     }
 }
 

@@ -61,14 +61,10 @@ pub(super) fn is_param_expr(
 pub(super) fn classify_builtin_site(
     env: &FileEnv<'_>,
     site: &ResolvedCallSite,
-    call: Option<&ValueCall>,
+    call: &ValueCall,
     tx_owner: CallableId,
     depth: u8,
 ) -> Option<BuiltinCall> {
-    if depth > 8 {
-        return None;
-    }
-    let call = call?;
     let ValueExpression::Member(receiver, method) = &call.callee else {
         return None;
     };
@@ -91,7 +87,7 @@ pub(super) fn classify_builtin_site(
         return None;
     }
     let this_chain = site.source_callee.starts_with("this.");
-    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth + 1)
+    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth)
         .then_some(builtin)
 }
 
@@ -111,7 +107,7 @@ fn is_local_or_builtin_receiver(
     tx_owner: CallableId,
     depth: u8,
 ) -> bool {
-    if depth > 8 {
+    if depth > 32 {
         return false;
     }
     match expr {
@@ -152,27 +148,30 @@ fn inner_call_is_clean(
     tx_owner: CallableId,
     depth: u8,
 ) -> bool {
-    let Some(inner_call) = env.calls_by_span.get(&(start, end)).copied() else {
-        return false;
-    };
-    if is_callback_param_handle(Some(inner_call), tx_owner, &env.callback_params) {
-        return true;
-    }
-    let Some(sites) = env.sites_by_key.get(&(inner_call.offset, inner_call.source_callee.as_str()))
-    else {
-        return false;
-    };
-    sites.iter().any(|site| {
-        site.invocation == InvocationKind::Call && match &site.target {
-            ResolvedCallTarget::RepositoryFunction { .. } | ResolvedCallTarget::Global { .. } => true,
-            ResolvedCallTarget::ModuleExport { .. } => {
-                exact_target(site).is_some_and(|api| !env.ctx.targets.publishers.contains(&api))
-            }
-            ResolvedCallTarget::Unknown => {
-                classify_builtin_site(env, site, Some(inner_call), tx_owner, depth + 1).is_some()
-            }
-            ResolvedCallTarget::Alternatives(_) => false,
-        }
+    env.calls_by_span.get(&(start, end)).copied().is_some_and(|inner| {
+        is_callback_param_handle(Some(inner), tx_owner, &env.callback_params)
+            || env
+                .sites_by_key
+                .get(&(inner.offset, inner.source_callee.as_str()))
+                .is_some_and(|sites| {
+                    sites.iter().any(|site| {
+                        site.invocation == InvocationKind::Call
+                            && match &site.target {
+                                ResolvedCallTarget::RepositoryFunction { .. }
+                                | ResolvedCallTarget::Global { .. } => true,
+                                ResolvedCallTarget::ModuleExport { .. } => {
+                                    exact_target(site).is_some_and(|api| {
+                                        !env.ctx.targets.publishers.contains(&api)
+                                    })
+                                }
+                                ResolvedCallTarget::Unknown => {
+                                    classify_builtin_site(env, site, inner, tx_owner, depth + 1)
+                                        .is_some()
+                                }
+                                ResolvedCallTarget::Alternatives(_) => false,
+                            }
+                    })
+                })
     })
 }
 

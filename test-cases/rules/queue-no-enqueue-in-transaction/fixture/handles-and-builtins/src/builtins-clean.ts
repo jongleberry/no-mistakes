@@ -1,8 +1,12 @@
 import { withTx } from './tx'
-import { formatId } from '@sample/utils'
+import defaultUtils, { fetchLabels, formatId } from '@sample/utils'
 
 function extractId(row: { id: string }): string {
   return row.id.trim().toLowerCase()
+}
+
+function getLocalRows(): { id: string }[] {
+  return []
 }
 
 export class ItemRunner {
@@ -12,22 +16,28 @@ export class ItemRunner {
     return withTx(async query => {
       const seen = new Set<string>()
       const byId = new Map<string, string>()
-      const ids = (extra ?? rows)
+      const ids = (extra ?? undefined ?? rows)
         .filter(Boolean)
         .map(extractId)
         .map(formatId)
+        .map(defaultUtils)
+        .map(defaultUtils.format)
         .filter(id => id.length > 0)
       for (const id of ids) {
         seen.add(id)
         byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', '-'))
       }
+      const localIds = getLocalRows().map(r => r.id)
+      const fetchedLabels = fetchLabels().map((label: string) => label.trim())
       const keys = Object.keys(Object.fromEntries(byId.entries()))
       const joined = Array.from(seen).join(',')
       const payload = JSON.stringify({ keys, joined, ok: Array.isArray(ids) }, null, 2)
+      const filteredPayload = JSON.stringify({ keys }, ['keys'])
       const parsed = JSON.parse(payload)
       const count = Number.isFinite(ids.length) ? Math.min(10, ids.length) : 0
       const absValues = [1, -2].map(Math.abs)
-      const trimmed = `prefix-${joined}`.trim()
+      const fixedPi = Math.PI.toFixed(2)
+      const trimmed = `prefix-${rows[0]?.id ?? joined}`.trim()
       const raw = String.raw`SELECT ${String.fromCharCode(49)}`
       const stamp = new Date().toISOString()
       const ownItems = this.items.map(item => item.trim())
@@ -37,7 +47,22 @@ export class ItemRunner {
       )
       await Promise.all(awaitedIds.map(query))
       const tried = await Promise.try(() => count)
-      return { count, parsed, raw, stamp, nested, absValues, trimmed, ownItems, tried, hasFirst: seen.has(ids[0] ?? '') }
+      return {
+        count,
+        parsed,
+        filteredPayload,
+        raw,
+        stamp,
+        nested,
+        absValues,
+        fixedPi,
+        trimmed,
+        ownItems,
+        localIds,
+        fetchedLabels,
+        tried,
+        hasFirst: seen.has(ids[0] ?? ''),
+      }
     })
   }
 }

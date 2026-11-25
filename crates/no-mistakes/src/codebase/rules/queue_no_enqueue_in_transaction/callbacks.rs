@@ -142,16 +142,16 @@ fn resolve_imported_expr<'a>(env: &FileEnv<'a>, expr: &ValueExpression) -> Optio
     if has_star_reexport(env.ctx, env.file, &binding.specifier) {
         return Some(ImportedExpr::StarReexport);
     }
-    let export = match binding.kind {
-        ImportedBindingKind::Namespace => suffix?,
-        ImportedBindingKind::Named => suffix.map_or_else(
-            || binding.imported.clone(),
-            |s| format!("{}.{s}", binding.imported),
-        ),
-        ImportedBindingKind::Default => suffix.map_or_else(
-            || "default".to_string(),
-            |s| format!("default.{s}"),
-        ),
+    let base = match binding.kind {
+        ImportedBindingKind::Namespace => "",
+        ImportedBindingKind::Named => binding.imported.as_str(),
+        ImportedBindingKind::Default => "default",
+    };
+    let export = match (base, suffix) {
+        ("", Some(s)) => s,
+        ("", None) => return None,
+        (b, Some(s)) => format!("{b}.{s}"),
+        (b, None) => b.to_owned(),
     };
     if env.ctx.targets.publishers.contains(&(binding.specifier.as_str(), export.as_str())) {
         Some(ImportedExpr::Publisher(binding.specifier.as_str(), export))

@@ -114,10 +114,10 @@ fn check_callback_site(
     } else if site.target == ResolvedCallTarget::Unknown
         && !is_callback_param_handle(call, tx_owner, &env.callback_params)
     {
-        if let Some(builtin) = classify_builtin_site(env, site, call, tx_owner, 0) {
-            if let Some(call) = call {
-                walk.inspect_builtin(env, site, call, builtin, tx_owner);
-            }
+        if let Some((call, builtin)) = call.and_then(|c| {
+            classify_builtin_site(env, site, c, tx_owner, 0).map(|builtin| (c, builtin))
+        }) {
+            walk.inspect_builtin(env, site, call, builtin, tx_owner);
         } else {
             walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit"));

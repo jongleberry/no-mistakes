@@ -31,12 +31,13 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
     let imports: FxHashMap<&str, &ImportedBinding> = file_facts.imported_bindings.iter()
         .filter(|b| !b.is_type_only).map(|b| (b.local.as_str(), b)).collect();
     let calls: FxHashMap<CallKey<'_>, &ValueCall> = flow.calls.iter()
-        .filter(|c| !flow.tagged_templates.contains_key(&(c.offset, c.end)))
         .map(|c| ((c.offset, c.source_callee.as_str()), c)).collect();
+    let is_tagged = |c: &ValueCall| flow.tagged_templates.contains_key(&(c.offset, c.end));
     let mut callbacks = FxHashSet::default();
     for site in sites.iter().filter(|site| site.invocation == InvocationKind::Call) {
+        let call = calls.get(&site_key(site)).copied();
         if let Some(index) = exact_target(site).and_then(|api| ctx.targets.transactions.get(&api).copied()) {
-            match callback_for_transaction(site, index, &calls, &imports, &flow.generator_callables) {
+            match callback_for_transaction(site, index, call.filter(|c| !is_tagged(c)), &imports, &flow.generator_callables) {
                 Ok(callback) => { callbacks.insert(callback); }
                 Err(reason) => diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site, reason)),
             }
@@ -46,7 +47,7 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "ambiguous call target may invoke a configured transaction; call the imported transaction directly"));
         } else if site.target == ResolvedCallTarget::Unknown
-            && unresolved_transaction_site(ctx, file, site, calls.get(&site_key(site)).copied(), &imports)
+            && unresolved_transaction_site(ctx, file, site, call, &imports)
         {
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly"));
@@ -63,9 +64,10 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
             && !flow.deferred_calls.contains(&site.offset)
             && site.caller_id.is_some_and(|caller| callbacks.contains(&caller))
     }) {
+        let call = calls.get(&site_key(site)).copied();
         if let Some(api) = exact_target(site) {
             if ctx.targets.publishers.contains(&api)
-                && !calls.get(&site_key(site)).is_some_and(|call| call.bound)
+                && !call.is_some_and(|call| call.bound)
             {
                 diagnostics.findings.push(finding(ctx, site, api));
             }
@@ -76,7 +78,7 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
                 "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit"));
         } else if site.target == ResolvedCallTarget::Unknown
             && !site.caller_id.is_some_and(|caller| {
-                is_callback_param_member(calls.get(&site_key(site)).copied(), caller, &callback_params)
+                is_callback_param_handle(call, call.is_some_and(is_tagged), caller, &callback_params)
             })
         {
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
@@ -88,11 +90,11 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
 fn callback_for_transaction(
     site: &ResolvedCallSite,
     index: usize,
-    calls: &FxHashMap<CallKey<'_>, &ValueCall>,
+    call: Option<&ValueCall>,
     imports: &FxHashMap<&str, &ImportedBinding>,
     generators: &FxHashSet<CallableId>,
 ) -> Result<CallableId, &'static str> {
-    let Some(call) = calls.get(&site_key(site)) else {
+    let Some(call) = call else {
         return Err("transaction call uses a tagged template, so callback argument position cannot be proved; call the transaction directly with an inline callback");
     };
     if call.bound
@@ -179,13 +181,17 @@ fn root_ident(mut expr: &ValueExpression) -> Option<&str> {
     }
 }
 
-fn is_callback_param_member(
+fn is_callback_param_handle(
     call: Option<&ValueCall>,
+    tagged: bool,
     caller: CallableId,
     params: &FxHashSet<(CallableId, usize, &str)>,
 ) -> bool {
-    let Some(ValueExpression::Member(receiver, _)) = call.map(|c| &c.callee) else { return false; };
-    let mut receiver = receiver.as_ref();
+    let mut receiver = match call.map(|c| &c.callee) {
+        Some(ValueExpression::Member(receiver, _)) => receiver.as_ref(),
+        Some(callee) if tagged => callee,
+        _ => return false,
+    };
     while let ValueExpression::Member(inner, _) = receiver { receiver = inner.as_ref(); }
     matches!(receiver, ValueExpression::Named { name, scope: Some(scope), .. }
         if params.contains(&(caller, *scope, name.as_str())))

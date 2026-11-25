@@ -50,3 +50,6 @@ await transaction`write ${() => enqueue({ receiptId: "tagged" })}`;
 // Factory-returned transaction target.
 const factoryTransaction = getTransaction();
 await factoryTransaction("write", () => enqueue({ receiptId: "factory-tx" }));
+
+// Tagged template on a wildcard-reexported transaction import.
+await starTransaction`write ${() => enqueue({ receiptId: "star-reexport-tagged-tx" })}`;

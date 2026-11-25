@@ -6,6 +6,8 @@ const RULE: &str = "queue-no-enqueue-in-transaction";
 fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let root = rules_path(RULE, "fixture", "behavior");
     let incomplete = rules_path(RULE, "fixture", "incomplete");
+    let unanalyzable = rules_path(RULE, "fixture", "unanalyzable");
+    let directive_audit = rules_path(RULE, "fixture", "directive-audit");
     let reports = assert_saved_fixture_report(
         "queue_no_enqueue_in_transaction",
         &[
@@ -15,6 +17,26 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
                 "incomplete",
                 incomplete.clone(),
                 incomplete.join(".no-mistakes.yml"),
+            ),
+            (
+                "unanalyzable_report",
+                unanalyzable.clone(),
+                unanalyzable.join(".no-mistakes.yml"),
+            ),
+            (
+                "unanalyzable_advise",
+                unanalyzable.clone(),
+                unanalyzable.join("advise.yml"),
+            ),
+            (
+                "unanalyzable_ignore",
+                unanalyzable.clone(),
+                unanalyzable.join("ignore.yml"),
+            ),
+            (
+                "directive_audit",
+                directive_audit.clone(),
+                directive_audit.join(".no-mistakes.yml"),
             ),
         ],
         &[],
@@ -59,4 +81,35 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
         .as_str()
         .unwrap()
         .starts_with("Queue handoff"));
+
+    let reported = &reports["unanalyzable_report"];
+    assert_eq!(reported["exitCode"], 1);
+    let report_rows = reported["report"]["rules"].as_array().unwrap();
+    assert!(
+        !report_rows.is_empty()
+            && report_rows
+                .iter()
+                .all(|row| row["rule"] == RULE && row["target"] == "unanalyzable")
+    );
+    let advised = &reports["unanalyzable_advise"];
+    assert_eq!(advised["exitCode"], 0);
+    assert_eq!(advised["report"]["rules"], serde_json::json!([]));
+    assert_eq!(
+        advised["report"]["advisories"].as_array().unwrap().len(),
+        report_rows.len()
+    );
+    let ignored = &reports["unanalyzable_ignore"];
+    assert_eq!(ignored["exitCode"], 0);
+    assert_eq!(ignored["report"]["rules"], serde_json::json!([]));
+    assert_eq!(ignored["report"]["advisories"], serde_json::json!([]));
+
+    let audit = &reports["directive_audit"];
+    assert_eq!(audit["exitCode"], 1);
+    let audit_rows = audit["report"]["rules"].as_array().unwrap();
+    assert_eq!(audit_rows.len(), 1);
+    assert_eq!(audit_rows[0]["rule"], "invalid-disable-directive");
+    assert!(audit_rows[0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("disabled or out-of-scope rule `queue-no-enqueue-in-transaction`"));
 }

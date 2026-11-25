@@ -5,6 +5,7 @@ pub(super) fn collect(
     request: &GraphRuleRequest<'_>,
     session: Option<&crate::codebase::analysis_session::AnalysisSession>,
     findings: &mut Vec<RuleFinding>,
+    advisories: &mut Vec<RuleFinding>,
 ) -> Result<()> {
     if !request.config.rule_configured(RULE_ID)
         || (request.dependency_graph.is_none()
@@ -26,6 +27,9 @@ pub(super) fn collect(
         Some(session) => session.capture_check_result(RULE_ID, result)?,
         None => Some(result?),
     };
-    findings.extend(output.into_iter().flatten());
+    if let Some(output) = output {
+        findings.extend(output.findings);
+        advisories.extend(output.advisories);
+    }
     Ok(())
 }

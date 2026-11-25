@@ -14,20 +14,29 @@ before committing and publishers whose effects survive rollback.
 The rule matches a transaction call and a publish by their resolved import specifier
 and export name. An imported alias such as `import { enqueue as publish } from
 "@sample/jobs"` retains the `enqueue` export identity. Configure each module
-specifier and export the resolver exposes for your calls. Unresolved calls,
-shadowing locals, and calls imported from unrelated modules stay outside the check.
+specifier and export the resolver exposes for your calls. Local functions that
+shadow an imported name and calls imported from unrelated modules stay outside
+the check.
 
-The transaction call uses a direct import binding so its argument positions
-can be proved. Calls through bound aliases and tagged templates stay outside
-the check. The
-configured argument must be an inline arrow or non-generator function
-expression. The rule checks direct calls owned by that callback, including expression
-bodies. It does not prove whether a particular branch runs. A named callback, an opaque spread at or before
-the callback slot, and a generator body leave the transaction boundary
-unproven. A separate nested function or deferred callback has its own body.
-Deferred class instance fields also run outside that body.
-The rule leaves nested publishes alone unless their callback belongs to a separate
-configured transaction call.
+The transaction call must use a direct import binding so its argument positions
+can be proved, and the configured argument must be an inline arrow or
+non-generator function expression. The rule checks direct calls owned by that
+callback, including expression bodies, without proving whether a particular
+branch runs. A separate nested function, a deferred callback, or a deferred
+class instance field has its own body and runs outside the transaction callback.
+
+Shapes the rule cannot soundly prove are recorded as `unanalyzable` (never
+silently passed) and routed through the rule's `unanalyzable` policy (`report`
+by default, or `advise` / `ignore`):
+
+- Unresolved or ambiguous transaction or publish targets (including dynamic
+  member calls inside a transaction callback, nullish/alternative call targets,
+  and wildcard re-exports).
+- Bound, aliased, or factory-returned transaction calls, and tagged template
+  calls to a configured transaction.
+- Spread arguments at or before the configured callback argument slot.
+- Non-inline callbacks (identifier or expression references) and generator
+  callbacks.
 
 ## Options and defaults
 
@@ -110,8 +119,9 @@ handoff.
 ## Analysis
 
 The rule uses the prepared call graph at `max` effort. A request for `low`
-reports an effort warning and uses `max`. Selected files with parse errors
-produce incomplete analysis through the check report.
+reports an effort warning and uses `max`. Unprovable shapes follow
+`options.unanalyzable` (`report`, `advise`, or `ignore`). Selected files with
+parse errors produce incomplete analysis through the check report.
 
 ## Related rules
 

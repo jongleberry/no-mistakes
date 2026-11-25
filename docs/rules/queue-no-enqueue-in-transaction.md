@@ -25,8 +25,9 @@ callback, including expression bodies, without proving whether a particular
 branch runs. Method calls and tagged template queries on the transaction
 callback's own parameter (such as `tx.insertReceipt()`, `` tx.sql`...` ``, or
 `` tx`...` ``) are treated as transaction-bound work rather than unanalyzable.
-A separate nested function, a deferred callback, or a deferred
-class instance field has its own body and runs outside the transaction callback.
+Separate nested functions, deferred callbacks, and class instance field
+initializers have separate bodies and are outside the rule's direct-body
+analysis.
 
 Shapes the rule cannot soundly prove are recorded as `unanalyzable` (never
 silently passed) and routed through the rule's `unanalyzable` policy (`report`

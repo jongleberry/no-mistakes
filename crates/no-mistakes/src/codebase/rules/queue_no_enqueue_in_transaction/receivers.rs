@@ -92,11 +92,6 @@ pub(super) fn classify_builtin_site(
 
 fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) -> bool {
     let mods = &env.ctx.targets.publisher_modules;
-    for (m, _) in &site.returned_from {
-        if specifier_reaches_module(env.ctx, env.file, m, mods) {
-            return true;
-        }
-    }
     for (m, _, _) in &site.returned_member_from {
         if specifier_reaches_module(env.ctx, env.file, m, mods) {
             return true;

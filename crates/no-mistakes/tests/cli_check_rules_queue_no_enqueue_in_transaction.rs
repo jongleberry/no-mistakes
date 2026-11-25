@@ -95,13 +95,15 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     assert_eq!(
         handle_locations,
         [
-            ("src/map-enqueue.ts", 5),
-            ("src/map-enqueue.ts", 7),
-            ("src/map-enqueue.ts", 8),
+            ("src/map-enqueue.ts", 6),
             ("src/map-enqueue.ts", 9),
+            ("src/map-enqueue.ts", 10),
             ("src/map-enqueue.ts", 11),
             ("src/map-enqueue.ts", 12),
             ("src/map-enqueue.ts", 13),
+            ("src/map-enqueue.ts", 15),
+            ("src/map-enqueue.ts", 16),
+            ("src/map-enqueue.ts", 17),
         ]
     );
     let incomplete = &reports["incomplete"]["report"];

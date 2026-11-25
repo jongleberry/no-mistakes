@@ -121,7 +121,16 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/map-enqueue.ts",
           "import": "enqueue",
-          "line": 11,
+          "line": 10,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "const chained = rows.filter(r => r.id.length > 0).map(r => enqueue({ id: r.id }))",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/map-enqueue.ts",
+          "import": "enqueue",
+          "line": 15,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const fromCallback = Array.from(rows, r => enqueue({ id: r.id }))",
@@ -130,7 +139,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/map-enqueue.ts",
           "import": "enqueue",
-          "line": 12,
+          "line": 16,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const globalFrom = globalThis.Array.from(rows, r => enqueue({ id: r.id }))",
@@ -139,7 +148,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/map-enqueue.ts",
           "import": "enqueue",
-          "line": 13,
+          "line": 17,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await Promise.resolve().then(() => enqueue({ id: 'then' }))",
@@ -148,7 +157,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/map-enqueue.ts",
           "import": "enqueue",
-          "line": 5,
+          "line": 6,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const sendRow = (row: { id: string }) => enqueue({ id: row.id })",
@@ -157,7 +166,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/map-enqueue.ts",
           "import": "enqueue",
-          "line": 7,
+          "line": 9,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const direct = rows.map(r => enqueue({ id: r.id }))",
@@ -165,20 +174,29 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/map-enqueue.ts",
-          "import": "enqueue",
-          "line": 8,
+          "import": "rows.map",
+          "line": 11,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "const chained = rows.filter(r => r.id.length > 0).map(r => enqueue({ id: r.id }))",
+          "sourceLine": "const refCallback = rows.map(enqueue)",
           "target": "@sample/jobs#enqueue"
         },
         {
           "file": "src/map-enqueue.ts",
           "import": "rows.map",
-          "line": 9,
+          "line": 12,
           "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "const refCallback = rows.map(enqueue)",
+          "sourceLine": "const nsCallback = rows.map(jobs.enqueue)",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/map-enqueue.ts",
+          "import": "rows.map",
+          "line": 13,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "const aliasCallback = rows.map(aliasEnqueue)",
           "target": "@sample/jobs#enqueue"
         }
       ],

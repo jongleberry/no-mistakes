@@ -90,7 +90,8 @@ pub(super) fn classify_builtin_site(
     if returned_or_typed_from_publisher(env, site) {
         return None;
     }
-    is_local_or_builtin_receiver(env, receiver, call.offset, tx_owner, depth + 1)
+    let this_chain = site.source_callee.starts_with("this.");
+    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth + 1)
         .then_some(builtin)
 }
 
@@ -106,6 +107,7 @@ fn is_local_or_builtin_receiver(
     env: &FileEnv<'_>,
     expr: &ValueExpression,
     call_offset: u32,
+    this_chain: bool,
     tx_owner: CallableId,
     depth: u8,
 ) -> bool {
@@ -121,19 +123,19 @@ fn is_local_or_builtin_receiver(
                 && builtins::GLOBAL_STATIC_OBJECTS.contains(&name.as_str())
         }
         ValueExpression::Member(inner, _) => {
-            matches!(inner.as_ref(), ValueExpression::Named { name, scope: None, .. } if name == "this")
-                || is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth + 1)
+            (this_chain && matches!(inner.as_ref(), ValueExpression::Unknown))
+                || is_local_or_builtin_receiver(env, inner, call_offset, this_chain, tx_owner, depth + 1)
         }
         ValueExpression::Array(..) => true,
         ValueExpression::Awaited(inner) => {
-            is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth + 1)
+            is_local_or_builtin_receiver(env, inner, call_offset, false, tx_owner, depth + 1)
         }
         ValueExpression::Nullish(left, right)
         | ValueExpression::Default(left, right)
         | ValueExpression::Either(left, right) => {
             [left.as_ref(), right.as_ref()].into_iter().all(|arm| {
                 matches!(arm, ValueExpression::Null | ValueExpression::Undefined)
-                    || is_local_or_builtin_receiver(env, arm, call_offset, tx_owner, depth + 1)
+                    || is_local_or_builtin_receiver(env, arm, call_offset, false, tx_owner, depth + 1)
             })
         }
         ValueExpression::Derived(parts) => !parts.iter().any(|p| expr_is_import(p, &env.imports)),

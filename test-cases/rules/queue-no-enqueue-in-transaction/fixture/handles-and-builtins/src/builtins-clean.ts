@@ -23,10 +23,12 @@ export class ItemRunner {
         .map(defaultUtils)
         .map(defaultUtils.format)
         .filter(id => id.length > 0)
+      const localSep = '-'
       for (const id of ids) {
         seen.add(id)
-        byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', '-'))
+        byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', localSep))
       }
+      const parsedNum = parseInt('10', 10)
       const localIds = getLocalRows().map(r => r.id)
       const fetchedLabels = fetchLabels().map((label: string) => label.trim())
       const keys = Object.keys(Object.fromEntries(byId.entries()))
@@ -49,6 +51,7 @@ export class ItemRunner {
       const tried = await Promise.try(() => count)
       return {
         count,
+        parsedNum,
         parsed,
         filteredPayload,
         raw,

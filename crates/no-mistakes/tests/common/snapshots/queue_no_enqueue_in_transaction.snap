@@ -241,7 +241,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>",
-          "line": 15,
+          "line": 16,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map((r) => unknownJobs[method]({ receiptId: r.id }));",
@@ -250,7 +250,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>",
-          "line": 18,
+          "line": 20,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await unknownQueues[method].add({ receiptId: \"dynamic-receiver\" });",
@@ -259,7 +259,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>.add",
-          "line": 28,
+          "line": 30,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "(null as unknown as { add(): void }).add();",
@@ -268,7 +268,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "handle",
-          "line": 27,
+          "line": 29,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await handle(\"SELECT 1\");",
@@ -277,7 +277,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "items.map",
-          "line": 36,
+          "line": 45,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "items.map(opaqueCallback);",
@@ -286,7 +286,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "publisherQueue.add",
-          "line": 19,
+          "line": 21,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await publisherQueue.add({ receiptId: \"publisher-factory\" });",
@@ -295,7 +295,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 16,
+          "line": 17,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(starEnqueue);",
@@ -304,7 +304,16 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 20,
+          "line": 18,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(jobsNs as unknown as (row: { id: string }) => unknown);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 22,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(getCallback());",
@@ -313,7 +322,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 21,
+          "line": 23,
           "message": "built-in call inside transaction callback has a spread argument at or before its callback slot; pass arguments positionally so callbacks can be checked",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(...callbacks);",
@@ -322,7 +331,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 22,
+          "line": 24,
           "message": "built-in callback inside transaction is a generator function, whose execution timing cannot be proved; use a regular or async inline callback",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(function* (r) {",
@@ -330,8 +339,17 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 37,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(a6);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
           "import": "starQueue.add",
-          "line": 17,
+          "line": 19,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await starQueue.add({ receiptId: \"star-member\" });",
@@ -498,7 +516,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>",
-          "line": 15,
+          "line": 16,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map((r) => unknownJobs[method]({ receiptId: r.id }));",
@@ -507,7 +525,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>",
-          "line": 18,
+          "line": 20,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await unknownQueues[method].add({ receiptId: \"dynamic-receiver\" });",
@@ -516,7 +534,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "<unknown>.add",
-          "line": 28,
+          "line": 30,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "(null as unknown as { add(): void }).add();",
@@ -525,7 +543,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "handle",
-          "line": 27,
+          "line": 29,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await handle(\"SELECT 1\");",
@@ -534,7 +552,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "items.map",
-          "line": 36,
+          "line": 45,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "items.map(opaqueCallback);",
@@ -543,7 +561,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "publisherQueue.add",
-          "line": 19,
+          "line": 21,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await publisherQueue.add({ receiptId: \"publisher-factory\" });",
@@ -552,7 +570,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 16,
+          "line": 17,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(starEnqueue);",
@@ -561,7 +579,16 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 20,
+          "line": 18,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(jobsNs as unknown as (row: { id: string }) => unknown);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 22,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(getCallback());",
@@ -570,7 +597,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 21,
+          "line": 23,
           "message": "built-in call inside transaction callback has a spread argument at or before its callback slot; pass arguments positionally so callbacks can be checked",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(...callbacks);",
@@ -579,7 +606,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/builtin-unanalyzable.ts",
           "import": "rows.map",
-          "line": 22,
+          "line": 24,
           "message": "built-in callback inside transaction is a generator function, whose execution timing cannot be proved; use a regular or async inline callback",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map(function* (r) {",
@@ -587,8 +614,17 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/builtin-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 37,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(a6);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/builtin-unanalyzable.ts",
           "import": "starQueue.add",
-          "line": 17,
+          "line": 19,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await starQueue.add({ receiptId: \"star-member\" });",

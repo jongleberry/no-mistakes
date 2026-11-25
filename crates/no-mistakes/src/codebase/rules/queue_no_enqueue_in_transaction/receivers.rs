@@ -63,7 +63,6 @@ pub(super) fn classify_builtin_site(
     site: &ResolvedCallSite,
     call: &ValueCall,
     tx_owner: CallableId,
-    depth: u8,
 ) -> Option<BuiltinCall> {
     let ValueExpression::Member(receiver, method) = &call.callee else {
         return None;
@@ -87,7 +86,7 @@ pub(super) fn classify_builtin_site(
         return None;
     }
     let this_chain = site.source_callee.starts_with("this.");
-    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth)
+    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner)
         .then_some(builtin)
 }
 
@@ -105,11 +104,7 @@ fn is_local_or_builtin_receiver(
     call_offset: u32,
     this_chain: bool,
     tx_owner: CallableId,
-    depth: u8,
 ) -> bool {
-    if depth > 32 {
-        return false;
-    }
     match expr {
         ValueExpression::Named { name, scope: Some(scope), .. } => {
             *scope != 0 || !env.imports.contains_key(name.as_str())
@@ -120,22 +115,22 @@ fn is_local_or_builtin_receiver(
         }
         ValueExpression::Member(inner, _) => {
             (this_chain && matches!(inner.as_ref(), ValueExpression::Unknown))
-                || is_local_or_builtin_receiver(env, inner, call_offset, this_chain, tx_owner, depth + 1)
+                || is_local_or_builtin_receiver(env, inner, call_offset, this_chain, tx_owner)
         }
         ValueExpression::Array(..) => true,
         ValueExpression::Awaited(inner) => {
-            is_local_or_builtin_receiver(env, inner, call_offset, false, tx_owner, depth + 1)
+            is_local_or_builtin_receiver(env, inner, call_offset, false, tx_owner)
         }
         ValueExpression::Nullish(left, right)
         | ValueExpression::Default(left, right)
         | ValueExpression::Either(left, right) => {
             [left.as_ref(), right.as_ref()].into_iter().all(|arm| {
                 matches!(arm, ValueExpression::Null | ValueExpression::Undefined)
-                    || is_local_or_builtin_receiver(env, arm, call_offset, false, tx_owner, depth + 1)
+                    || is_local_or_builtin_receiver(env, arm, call_offset, false, tx_owner)
             })
         }
         ValueExpression::Derived(parts) => !parts.iter().any(|p| expr_is_import(p, &env.imports)),
-        ValueExpression::Call(start, end) => inner_call_is_clean(env, *start, *end, tx_owner, depth),
+        ValueExpression::Call(start, end) => inner_call_is_clean(env, *start, *end, tx_owner),
         ValueExpression::Unknown => env.builtin_construct_offsets.contains(&call_offset),
         _ => false,
     }
@@ -146,7 +141,6 @@ fn inner_call_is_clean(
     start: u32,
     end: u32,
     tx_owner: CallableId,
-    depth: u8,
 ) -> bool {
     env.calls_by_span.get(&(start, end)).copied().is_some_and(|inner| {
         is_callback_param_handle(Some(inner), tx_owner, &env.callback_params)
@@ -165,8 +159,7 @@ fn inner_call_is_clean(
                                     })
                                 }
                                 ResolvedCallTarget::Unknown => {
-                                    classify_builtin_site(env, site, inner, tx_owner, depth + 1)
-                                        .is_some()
+                                    classify_builtin_site(env, site, inner, tx_owner).is_some()
                                 }
                                 ResolvedCallTarget::Alternatives(_) => false,
                             }

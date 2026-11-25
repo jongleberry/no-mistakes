@@ -24,27 +24,15 @@ pub(super) struct Context<'a> {
 }
 
 pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut AnalysisDiagnostics) {
-    let Some(file_facts) = ctx
-        .facts
-        .get_ts_facts(file)
-        .filter(|facts| facts.parse_error.is_none() && facts.operational_error.is_none())
-    else {
-        return;
-    };
+    let Some(file_facts) = ctx.facts.get_ts_facts(file)
+        .filter(|f| f.parse_error.is_none() && f.operational_error.is_none()) else { return; };
     let sites = ctx.graph.call_sites_in_file(file);
     let flow = &file_facts.value_flow;
-    let imports: FxHashMap<&str, &ImportedBinding> = file_facts
-        .imported_bindings
-        .iter()
-        .filter(|binding| !binding.is_type_only)
-        .map(|binding| (binding.local.as_str(), binding))
-        .collect();
-    let calls: FxHashMap<CallKey<'_>, &ValueCall> = flow
-        .calls
-        .iter()
-        .filter(|call| !flow.tagged_templates.contains_key(&(call.offset, call.end)))
-        .map(|call| ((call.offset, call.source_callee.as_str()), call))
-        .collect();
+    let imports: FxHashMap<&str, &ImportedBinding> = file_facts.imported_bindings.iter()
+        .filter(|b| !b.is_type_only).map(|b| (b.local.as_str(), b)).collect();
+    let calls: FxHashMap<CallKey<'_>, &ValueCall> = flow.calls.iter()
+        .filter(|c| !flow.tagged_templates.contains_key(&(c.offset, c.end)))
+        .map(|c| ((c.offset, c.source_callee.as_str()), c)).collect();
     let mut callbacks = FxHashSet::default();
     for site in sites.iter().filter(|site| site.invocation == InvocationKind::Call) {
         if let Some(index) = exact_target(site).and_then(|api| ctx.targets.transactions.get(&api).copied()) {
@@ -64,6 +52,12 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
                 "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly"));
         }
     }
+    let callback_params: FxHashSet<(CallableId, usize, &str)> = flow
+        .parameters
+        .iter()
+        .filter(|param| callbacks.contains(&param.owner))
+        .map(|param| (param.owner, param.scope, param.name.as_str()))
+        .collect();
     for site in sites.iter().filter(|site| {
         site.invocation == InvocationKind::Call
             && !flow.deferred_calls.contains(&site.offset)
@@ -80,7 +74,11 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
         {
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit"));
-        } else if site.target == ResolvedCallTarget::Unknown {
+        } else if site.target == ResolvedCallTarget::Unknown
+            && !site.caller_id.is_some_and(|caller| {
+                is_callback_param_member(calls.get(&site_key(site)).copied(), caller, &callback_params)
+            })
+        {
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit"));
         }
@@ -179,4 +177,16 @@ fn root_ident(mut expr: &ValueExpression) -> Option<&str> {
         ValueExpression::Named { name, scope: None | Some(0), .. } => Some(name.as_str()),
         _ => None,
     }
+}
+
+fn is_callback_param_member(
+    call: Option<&ValueCall>,
+    caller: CallableId,
+    params: &FxHashSet<(CallableId, usize, &str)>,
+) -> bool {
+    let Some(ValueExpression::Member(receiver, _)) = call.map(|c| &c.callee) else { return false; };
+    let mut receiver = receiver.as_ref();
+    while let ValueExpression::Member(inner, _) = receiver { receiver = inner.as_ref(); }
+    matches!(receiver, ValueExpression::Named { name, scope: Some(scope), .. }
+        if params.contains(&(caller, *scope, name.as_str())))
 }

@@ -131,3 +131,7 @@ pub(super) fn is_builtin_global_fn(
         _ => false,
     }
 }
+
+#[cfg(all(test, any(nm_shard_all, nm_shard_1)))]
+#[path = "builtins_tests.rs"]
+mod tests;

@@ -115,7 +115,7 @@ fn check_callback_site(
         && !is_callback_param_handle(call, tx_owner, &env.callback_params)
     {
         if let Some((call, builtin)) = call.and_then(|c| {
-            classify_builtin_site(env, site, c, tx_owner, 0).map(|builtin| (c, builtin))
+            classify_builtin_site(env, site, c, tx_owner).map(|builtin| (c, builtin))
         }) {
             walk.inspect_builtin(env, site, call, builtin, tx_owner);
         } else {

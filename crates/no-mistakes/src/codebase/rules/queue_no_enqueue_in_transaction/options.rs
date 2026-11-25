@@ -31,6 +31,7 @@ pub(super) struct Targets<'a> {
     pub(super) transactions: FxHashMap<Api<'a>, usize>,
     pub(super) transaction_modules: FxHashSet<&'a str>,
     pub(super) publishers: FxHashSet<Api<'a>>,
+    pub(super) publisher_modules: FxHashSet<&'a str>,
 }
 
 impl Options {
@@ -47,12 +48,19 @@ impl Options {
             }
             transaction_modules.insert(api.0);
         }
-        let publishers = self
-            .publishers
-            .iter()
-            .map(|publisher| api(&publisher.module, &publisher.export, "publishers"))
-            .collect::<Result<_>>()?;
-        Ok(Targets { transactions, transaction_modules, publishers })
+        let mut publishers = FxHashSet::default();
+        let mut publisher_modules = FxHashSet::default();
+        for publisher in &self.publishers {
+            let api = api(&publisher.module, &publisher.export, "publishers")?;
+            publisher_modules.insert(api.0);
+            publishers.insert(api);
+        }
+        Ok(Targets {
+            transactions,
+            transaction_modules,
+            publishers,
+            publisher_modules,
+        })
     }
 }
 

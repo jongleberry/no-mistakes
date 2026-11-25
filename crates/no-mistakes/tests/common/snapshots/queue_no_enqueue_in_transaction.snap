@@ -109,7 +109,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 4,
           "message": "Queue handoff: Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "await transaction(\"write\", () => enqueue({ receiptId: \"moved\" }));",
+          "sourceLine": "await database.transaction(\"write\", () => enqueue({ receiptId: \"moved\" }));",
           "target": "@sample/jobs#enqueue"
         }
       ],

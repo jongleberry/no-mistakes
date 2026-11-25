@@ -1,4 +1,4 @@
-import { transaction } from "@sample/database";
+import * as database from "@sample/database";
 import { enqueue } from "@sample/jobs";
 
-await transaction("write", () => enqueue({ receiptId: "moved" }));
+await database.transaction("write", () => enqueue({ receiptId: "moved" }));

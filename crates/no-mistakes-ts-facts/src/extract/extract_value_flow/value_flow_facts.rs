@@ -158,7 +158,6 @@ pub struct ValueFlowFacts {
     pub reference_affected_scope_buffers: usize,
     #[cfg(feature = "test-instrumentation")]
     pub reference_affected_name_buffers: usize,
-    /// Actual stores to earliest binding/parameter/callable invalidation offsets.
     #[cfg(feature = "test-instrumentation")]
     pub reference_invalidation_stores: usize,
     /// Sum of each mutation traversal's peak pending heap capacity, in entries.
@@ -185,6 +184,7 @@ pub struct ValueFlowFacts {
     pub widened_string_assertions: FxHashMap<u32, Vec<ValueType>>,
     pub returns: Vec<(CallableId, ValueExpression)>,
     pub calls: Vec<ValueCall>,
+    pub(crate) deferred_calls: FxHashSet<u32>,
     pub type_exports: Vec<ExportedBinding>,
     pub type_shapes: FxHashMap<String, ValueType>,
     pub contextual_callbacks: FxHashMap<u32, ValueType>,

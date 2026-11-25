@@ -115,6 +115,12 @@ rules:
       moduleGlobs: ['./queue/**']
 ```
 
+[`queue-no-enqueue-in-transaction`](../rules/queue-no-enqueue-in-transaction.md)
+uses `options.transactions` with a `module`, `export`, and zero-based
+`callbackArgument` to select inline callbacks that run before commit.
+`options.publishers` names independently durable queue publishes by `module`
+and `export`. Use repository scope and narrow it with `include` and `exclude`.
+
 [`forbidden-dependencies`](../rules/forbidden-dependencies.md#glob-semantics)
 accepts file/directory/glob `options.roots` and `options.excludeRoots`, plus
 glob `options.forbiddenFiles`. Its `options.exceptions` entries contain `roots`

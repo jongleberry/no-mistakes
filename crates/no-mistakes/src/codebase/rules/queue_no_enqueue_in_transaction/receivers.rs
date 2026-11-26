@@ -105,7 +105,7 @@ fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) 
         .iter()
         .map(|(m, _, _)| m.as_str())
         .chain(site.typed_from.iter().map(|(m, _)| m.as_str()))
-        .any(|m| reexports::reaches_module(env.ctx, env.file, m, None, mods).may_reach())
+        .any(|m| reexports::reaches_module(env.ctx, env.file, m, None, mods))
 }
 
 fn is_local_or_builtin_receiver(

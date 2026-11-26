@@ -75,7 +75,6 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
                 file_facts.imported_bindings.iter().any(|b| {
                     b.local == root
                         && reexports::binding_reaches_module(ctx, file, b, &ctx.targets.publisher_modules)
-                            .may_reach()
                 })
             }))
             .map(|p| (p.scope, p.name.as_str())).collect(),

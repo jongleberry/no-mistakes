@@ -691,7 +691,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "customQueue.add",
-          "line": 34,
+          "line": 37,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await customQueue.add({ receiptId: \"custom-ctor\" });",
@@ -700,7 +700,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "dynamicQueue.add",
-          "line": 29,
+          "line": 32,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await dynamicQueue.add({ receiptId: \"aliased-dynamic-receiver\" });",
@@ -708,8 +708,26 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "missingDirectSend",
+          "line": 30,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await missingDirectSend({ id: \"missing-direct-publish\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "missingDirectTx",
+          "line": 51,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await missingDirectTx(\"write\", () => {});",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
           "import": "missingTx",
-          "line": 40,
+          "line": 50,
           "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await missingTx(\"write\", () => {});",
@@ -718,7 +736,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "mutableSet.add",
-          "line": 32,
+          "line": 35,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "mutableSet.add(\"reassigned-receiver\");",
@@ -727,7 +745,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "opaqueRunTx",
-          "line": 39,
+          "line": 49,
           "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await opaqueRunTx(\"write\", () => {});",
@@ -736,7 +754,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "opaqueSend",
-          "line": 27,
+          "line": 29,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await opaqueSend({ id: \"direct-opaque-publish\" });",
@@ -744,20 +762,11 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
-          "import": "rows.map",
-          "line": 21,
-          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "import": "r6.add",
+          "line": 44,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(opaqueMemberSend);",
-          "target": "unanalyzable"
-        },
-        {
-          "file": "src/flows/local-export-unanalyzable.ts",
-          "import": "rows.map",
-          "line": 22,
-          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
-          "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(spreadJobs.enqueue);",
+          "sourceLine": "r6.add(\"too-deep-receiver-alias\");",
           "target": "unanalyzable"
         },
         {
@@ -766,7 +775,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 23,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
+          "sourceLine": "rows.map(opaqueMemberSend);",
           "target": "unanalyzable"
         },
         {
@@ -775,7 +784,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 24,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(mutableSend);",
+          "sourceLine": "rows.map(spreadJobs.enqueue);",
           "target": "unanalyzable"
         },
         {
@@ -784,13 +793,31 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 25,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(localCycleA);",
+          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
           "target": "unanalyzable"
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "rows.map",
           "line": 26,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(mutableSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 27,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(localCycleA);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 28,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map((objHelpers as unknown as { missing: (row: { id: string }) => unknown }).missing);",
@@ -1245,7 +1272,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "customQueue.add",
-          "line": 34,
+          "line": 37,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await customQueue.add({ receiptId: \"custom-ctor\" });",
@@ -1254,7 +1281,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "dynamicQueue.add",
-          "line": 29,
+          "line": 32,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await dynamicQueue.add({ receiptId: \"aliased-dynamic-receiver\" });",
@@ -1262,8 +1289,26 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "missingDirectSend",
+          "line": 30,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await missingDirectSend({ id: \"missing-direct-publish\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "missingDirectTx",
+          "line": 51,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await missingDirectTx(\"write\", () => {});",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
           "import": "missingTx",
-          "line": 40,
+          "line": 50,
           "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await missingTx(\"write\", () => {});",
@@ -1272,7 +1317,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "mutableSet.add",
-          "line": 32,
+          "line": 35,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "mutableSet.add(\"reassigned-receiver\");",
@@ -1281,7 +1326,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "opaqueRunTx",
-          "line": 39,
+          "line": 49,
           "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await opaqueRunTx(\"write\", () => {});",
@@ -1290,7 +1335,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "opaqueSend",
-          "line": 27,
+          "line": 29,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await opaqueSend({ id: \"direct-opaque-publish\" });",
@@ -1298,20 +1343,11 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
-          "import": "rows.map",
-          "line": 21,
-          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "import": "r6.add",
+          "line": 44,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(opaqueMemberSend);",
-          "target": "unanalyzable"
-        },
-        {
-          "file": "src/flows/local-export-unanalyzable.ts",
-          "import": "rows.map",
-          "line": 22,
-          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
-          "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(spreadJobs.enqueue);",
+          "sourceLine": "r6.add(\"too-deep-receiver-alias\");",
           "target": "unanalyzable"
         },
         {
@@ -1320,7 +1356,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 23,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
+          "sourceLine": "rows.map(opaqueMemberSend);",
           "target": "unanalyzable"
         },
         {
@@ -1329,7 +1365,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 24,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(mutableSend);",
+          "sourceLine": "rows.map(spreadJobs.enqueue);",
           "target": "unanalyzable"
         },
         {
@@ -1338,13 +1374,31 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "line": 25,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "rows.map(localCycleA);",
+          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
           "target": "unanalyzable"
         },
         {
           "file": "src/flows/local-export-unanalyzable.ts",
           "import": "rows.map",
           "line": 26,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(mutableSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 27,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(localCycleA);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 28,
           "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "rows.map((objHelpers as unknown as { missing: (row: { id: string }) => unknown }).missing);",

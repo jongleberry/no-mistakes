@@ -42,27 +42,23 @@ impl ImportCollector {
         declarator: &VariableDeclarator<'_>,
     ) {
         use oxc_ast::ast::TSType;
-        let BindingPattern::BindingIdentifier(identifier) = &declarator.id else {
-            return;
-        };
-        let Some(annotation) = declarator.type_annotation.as_ref() else {
-            return;
-        };
-        if matches!(
-            &annotation.type_annotation,
-            TSType::TSArrayType(_)
-                | TSType::TSTupleType(_)
-                | TSType::TSStringKeyword(_)
-                | TSType::TSNumberKeyword(_)
-                | TSType::TSBooleanKeyword(_)
-                | TSType::TSBigIntKeyword(_)
-        ) {
-            let scope = self
-                .callee_binding_scope(identifier.name.as_str())
-                .unwrap_or(0);
-            self.value_flow
-                .builtin_const_bindings
-                .insert((scope, identifier.name.to_string()), None);
+        if let (BindingPattern::BindingIdentifier(identifier), Some(annotation)) =
+            (&declarator.id, &declarator.type_annotation)
+        {
+            if matches!(
+                &annotation.type_annotation,
+                TSType::TSArrayType(_)
+                    | TSType::TSStringKeyword(_)
+                    | TSType::TSNumberKeyword(_)
+                    | TSType::TSBooleanKeyword(_)
+            ) {
+                let scope = self
+                    .callee_binding_scope(identifier.name.as_str())
+                    .unwrap_or(0);
+                self.value_flow
+                    .builtin_const_bindings
+                    .insert((scope, identifier.name.to_string()), None);
+            }
         }
     }
 }

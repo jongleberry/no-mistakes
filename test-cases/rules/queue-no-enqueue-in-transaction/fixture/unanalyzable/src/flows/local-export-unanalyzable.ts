@@ -1,5 +1,7 @@
 import { transaction } from "@sample/database";
 import { missingTx, opaqueRunTx } from "../db-named";
+import { missingDirectTx } from "../db-missing";
+import { missingDirectSend } from "../jobs-missing";
 import {
   constNsAlias,
   localCycleA,
@@ -25,6 +27,7 @@ export function mapOpaqueLocalExports(rows: { id: string }[]) {
     rows.map(localCycleA);
     rows.map((objHelpers as unknown as { missing: (row: { id: string }) => unknown }).missing);
     await opaqueSend({ id: "direct-opaque-publish" });
+    await missingDirectSend({ id: "missing-direct-publish" });
     const dynamicQueue = unknownQueues[method];
     await dynamicQueue.add({ receiptId: "aliased-dynamic-receiver" });
     let mutableSet = new Set<string>();
@@ -32,10 +35,18 @@ export function mapOpaqueLocalExports(rows: { id: string }[]) {
     mutableSet.add("reassigned-receiver");
     const customQueue = new CustomQueue();
     await customQueue.add({ receiptId: "custom-ctor" });
+    const r1 = new Set<string>();
+    const r2 = r1;
+    const r3 = r2;
+    const r4 = r3;
+    const r5 = r4;
+    const r6 = r5;
+    r6.add("too-deep-receiver-alias");
   });
 }
 
 export async function runOpaqueAndMissingTransactions() {
   await opaqueRunTx("write", () => {});
   await missingTx("write", () => {});
+  await missingDirectTx("write", () => {});
 }

@@ -70,12 +70,9 @@ fn resolve_transaction(ctx: &Context<'_>, file: &Path, api: Api<'_>) -> TxResolu
     match reexports::follow_export(ctx, file, api.0, api.1, &|m, e| {
         ctx.targets.transactions.contains_key(&(m, e))
     }) {
-        ResolvedApi::Target(m, e) => ctx
-            .targets
-            .transactions
-            .get(&(m.as_str(), e.as_str()))
-            .copied()
-            .map_or(TxResolution::Other, TxResolution::Index),
+        ResolvedApi::Target(m, e) => TxResolution::Index(
+            ctx.targets.transactions[&(m.as_str(), e.as_str())],
+        ),
         ResolvedApi::Other => TxResolution::Other,
         ResolvedApi::Unanalyzable => TxResolution::Unanalyzable,
     }
@@ -119,14 +116,14 @@ fn unresolved_transaction_site(
 ) -> bool {
     let (mods, txs) = (&ctx.targets.transaction_modules, &ctx.targets.transactions);
     for (m, e) in &site.returned_from {
-        if reexports::reaches_module(ctx, file, m, None, mods).may_reach()
+        if reexports::reaches_module(ctx, file, m, None, mods)
             && !txs.contains_key(&(m.as_str(), e.as_str()))
         {
             return true;
         }
     }
     for (m, e, _) in &site.returned_member_from {
-        if reexports::reaches_module(ctx, file, m, None, mods).may_reach()
+        if reexports::reaches_module(ctx, file, m, None, mods)
             && !txs.contains_key(&(m.as_str(), e.as_str()))
         {
             return true;
@@ -135,7 +132,7 @@ fn unresolved_transaction_site(
     let Some(binding) = call.and_then(|c| root_ident(&c.callee)).and_then(|name| imports.get(name)) else {
         return false;
     };
-    reexports::binding_reaches_module(ctx, file, binding, mods).may_reach()
+    reexports::binding_reaches_module(ctx, file, binding, mods)
 }
 
 fn root_ident(mut expr: &ValueExpression) -> Option<&str> {

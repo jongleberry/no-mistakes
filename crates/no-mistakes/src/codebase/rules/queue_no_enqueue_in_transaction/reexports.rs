@@ -53,7 +53,7 @@ fn walk(
     let Some(ImportTarget::File(target)) =
         ctx.graph.import_targets.get(from).and_then(|m| m.get(specifier))
     else {
-        return if specifier.starts_with('.') || specifier.starts_with('/') {
+        return if specifier.starts_with(['.', '/']) {
             ResolvedApi::Unanalyzable
         } else {
             ResolvedApi::Other

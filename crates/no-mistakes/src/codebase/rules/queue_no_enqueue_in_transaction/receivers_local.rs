@@ -79,7 +79,6 @@ pub(super) fn inner_call_is_clean(
                                                 Some(api.1),
                                                 &env.ctx.targets.publisher_modules,
                                             )
-                                            .may_reach()
                                         })
                                     }
                                     ResolvedCallTarget::Unknown => {

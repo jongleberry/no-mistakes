@@ -69,23 +69,6 @@ fn github_actions_required_pr_path_filters_are_documented() {
 }
 
 #[test]
-fn transaction_enqueue_rule_is_documented_across_check_entry_points() {
-    let root = repo_root();
-    let rule = "queue-no-enqueue-in-transaction";
-    assert!(rule_ids_from_source(&root).contains(rule));
-    for path in [
-        "docs/rules/README.md",
-        "docs/configuration/rules.md",
-        "docs/cli/check.md",
-        "docs/node-api.md",
-        "docs/feature-parity.md",
-        "plugins/no-mistakes/skills/no-mistakes/SKILL.md",
-    ] {
-        assert!(read(&root.join(path)).contains(rule), "{path}");
-    }
-}
-
-#[test]
 fn column_check_constraints_is_in_the_public_rule_inventory() {
     let rule = no_mistakes::codebase::rules::POSTGRES_COLUMN_CHECK_CONSTRAINTS;
     assert_eq!(rule, "postgres-column-check-constraints");

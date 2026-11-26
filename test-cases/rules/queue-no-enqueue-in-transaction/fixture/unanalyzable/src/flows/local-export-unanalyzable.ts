@@ -1,4 +1,5 @@
 import { transaction } from "@sample/database";
+import { formatId } from "@sample/utils";
 import { missingTx, opaqueRunTx } from "../db-named";
 import { missingDirectTx } from "../db-missing";
 import { missingDirectSend } from "../jobs-missing";
@@ -13,6 +14,7 @@ import {
 } from "../jobs-named";
 
 declare const method: string;
+declare const optionalFormat: typeof formatId | undefined;
 declare const unknownQueues: Record<string, { add: (job: { receiptId: string }) => Promise<void> }>;
 declare class CustomQueue {
   add(job: { receiptId: string }): Promise<void>;
@@ -42,6 +44,7 @@ export function mapOpaqueLocalExports(rows: { id: string }[]) {
     const r5 = r4;
     const r6 = r5;
     r6.add("too-deep-receiver-alias");
+    await (optionalFormat ?? formatId)({ id: "ambiguous-unknown-other" });
   });
 }
 
@@ -49,4 +52,5 @@ export async function runOpaqueAndMissingTransactions() {
   await opaqueRunTx("write", () => {});
   await missingTx("write", () => {});
   await missingDirectTx("write", () => {});
+  await (opaqueRunTx as unknown as { run: typeof transaction }).run("write", () => {});
 }

@@ -136,15 +136,14 @@ fn check_callback_site(
             }
         }
     } else if is_ambiguous(site)
-        && (site.has_unknown_target()
-            || any_candidate_matches(site, |api| {
-                matches!(
-                    reexports::follow_export(ctx, env.file, api.0, api.1, &|m, e| {
-                        ctx.targets.publishers.contains(&(m, e))
-                    }),
-                    ResolvedApi::Target(..) | ResolvedApi::Unanalyzable
-                )
-            }))
+        && (any_candidate_matches(site, |api| {
+            matches!(
+                reexports::follow_export(ctx, env.file, api.0, api.1, &|m, e| {
+                    ctx.targets.publishers.contains(&(m, e))
+                }),
+                ResolvedApi::Target(..) | ResolvedApi::Unanalyzable
+            )
+        }) || site.has_unknown_target())
     {
         walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
             "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit"));

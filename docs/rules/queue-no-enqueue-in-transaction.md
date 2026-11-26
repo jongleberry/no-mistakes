@@ -24,17 +24,23 @@ The transaction call must use a direct import binding so its argument positions
 can be proved, and the configured argument must be an inline arrow or
 non-generator function expression. The rule checks direct calls owned by that
 callback, including expression bodies, without proving whether a particular
-branch runs. Calls on the transaction callback's own parameter (such as
+branch runs. A helper reached from two transaction callbacks is checked under
+each of them. Calls on that transaction callback's own parameter (such as
 `query(...)`, `query<Row>(...)`, `tx.insertReceipt()`, `` tx.sql`...` ``, or
 `` tx`...` ``) are treated as transaction handles rather than publishers or
-unanalyzable targets. Built-in static methods (`Math.*`, `JSON.*`, `Number.*`,
+unanalyzable targets. A nested transaction that reuses a helper closing over
+the outer handle reports the captured call as unanalyzable: the exemption
+belongs only to the transaction whose parameter the call uses. Built-in static methods (`Math.*`, `JSON.*`, `Number.*`,
 `String.*`, `Object.*`, `Array.*`, `Promise.*`, and similar global built-in
 objects when not shadowed) and standard `Array`, `String`, `Map`, `Set`, `Promise`, `Number`,
 `Date`, and `RegExp` prototype methods on locals are known not to publish;
 callbacks passed to built-in methods such as `rows.map(...)`, `flatMap(...)`,
 `filter(...)`, `reduce(...)`, `forEach(...)`, `Array.from(...)`, and `.then(...)`
 are analyzed in the same transaction scope so an enqueue inside them is still
-flagged. Separate nested functions, deferred callbacks, and class instance field
+flagged. An optional callback argument (`JSON.stringify` replacer, or the
+replacement passed to `replace` / `replaceAll`) is skipped when it is `null`,
+`undefined`, an array, or an object. A conditional argument is checked on each
+arm, so a configured publisher in one arm is still reported. Separate nested functions, deferred callbacks, and class instance field
 initializers have separate bodies and are outside the rule's direct-body
 analysis.
 
@@ -44,8 +50,8 @@ by default, or `advise` / `ignore`):
 
 - Unresolved or ambiguous transaction or publish targets (including unresolved
   imports, dynamic callees, dynamic receivers, publisher-module factory returns,
-  nullish/alternative call targets, wildcard re-exports, and unresolvable or
-  cyclic local re-exports).
+  nullish/alternative call targets, wildcard re-exports that reach a configured
+  module or a cycle, and unresolvable or cyclic local re-exports).
 - Unprovable, spread, or generator callbacks passed to built-in methods inside
   a transaction callback.
 - Bound, aliased, or factory-returned transaction calls, and tagged template

@@ -45,9 +45,22 @@ fn walk(
     else {
         return spec.starts_with(['.', '/']);
     };
-    if !visited.insert((target.clone(), export.map(str::to_owned))) {
+    let key = (target.clone(), export.map(str::to_owned));
+    if !visited.insert(key.clone()) {
         return true;
     }
+    let reached = walk_target(ctx, target, export, modules, visited);
+    visited.remove(&key);
+    reached
+}
+
+fn walk_target(
+    ctx: &Context<'_>,
+    target: &Path,
+    export: Option<&str>,
+    modules: &FxHashSet<&str>,
+    visited: &mut FxHashSet<(PathBuf, Option<String>)>,
+) -> bool {
     let Some(tf) = ctx
         .facts
         .get_ts_facts(target)

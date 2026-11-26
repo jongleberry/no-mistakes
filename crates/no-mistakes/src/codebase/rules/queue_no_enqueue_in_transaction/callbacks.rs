@@ -1,19 +1,48 @@
 use super::builtins::{self, BuiltinCall};
+use super::options::Api;
 use super::receivers::{is_param_expr, FileEnv};
 use super::reexports::{self, ResolvedApi};
 use super::{finding, unanalyzable};
 use crate::codebase::dependencies::extract::{CallableId, ValueCall, ValueExpression};
 use crate::codebase::dependencies::graph::ResolvedCallSite;
 use crate::codebase::rules::analysis_policy::AnalysisDiagnostics;
+use crate::codebase::rules::RuleFinding;
 use crate::fx::FxHashSet;
 
 pub(super) struct CallbackWalk<'a> {
     pub(super) worklist: Vec<(CallableId, CallableId)>,
-    pub(super) visited: FxHashSet<CallableId>,
+    pub(super) visited: FxHashSet<(CallableId, CallableId)>,
+    pub(super) reported: FxHashSet<(u32, String)>,
     pub(super) diagnostics: &'a mut AnalysisDiagnostics,
 }
 
 impl CallbackWalk<'_> {
+    pub(super) fn report_publish(&mut self, env: &FileEnv<'_>, site: &ResolvedCallSite, api: Api<'_>) {
+        self.push_unique(site, finding(env.ctx, site, api));
+    }
+
+    pub(super) fn report_unanalyzable(
+        &mut self,
+        env: &FileEnv<'_>,
+        site: &ResolvedCallSite,
+        reason: &str,
+    ) {
+        let item = unanalyzable(env.ctx, site, reason);
+        if self.mark(site, &item) {
+            self.diagnostics.unanalyzable(env.ctx.policy, item);
+        }
+    }
+
+    fn push_unique(&mut self, site: &ResolvedCallSite, item: RuleFinding) {
+        if self.mark(site, &item) {
+            self.diagnostics.findings.push(item);
+        }
+    }
+
+    fn mark(&mut self, site: &ResolvedCallSite, item: &RuleFinding) -> bool {
+        self.reported.insert((site.offset, item.message.clone()))
+    }
+
     pub(super) fn inspect_builtin(
         &mut self,
         env: &FileEnv<'_>,
@@ -24,8 +53,8 @@ impl CallbackWalk<'_> {
     ) {
         for &index in builtin.callbacks {
             if call.spread_at.is_some_and(|spread| spread <= index) {
-                self.diagnostics.unanalyzable(env.ctx.policy, unanalyzable(env.ctx, site,
-                    "built-in call inside transaction callback has a spread argument at or before its callback slot; pass arguments positionally so callbacks can be checked"));
+                self.report_unanalyzable(env, site,
+                    "built-in call inside transaction callback has a spread argument at or before its callback slot; pass arguments positionally so callbacks can be checked");
                 return;
             }
             if let Some(arg) = call.arguments.get(index) {
@@ -50,9 +79,9 @@ impl CallbackWalk<'_> {
         match arg {
             ValueExpression::Callable(cb) => {
                 if env.file_facts.value_flow.generator_callables.contains(cb) {
-                    self.diagnostics.unanalyzable(env.ctx.policy, unanalyzable(env.ctx, site,
-                        "built-in callback inside transaction is a generator function, whose execution timing cannot be proved; use a regular or async inline callback"));
-                } else if self.visited.insert(*cb) {
+                    self.report_unanalyzable(env, site,
+                        "built-in callback inside transaction is a generator function, whose execution timing cannot be proved; use a regular or async inline callback");
+                } else if self.visited.insert((*cb, tx_owner)) {
                     self.worklist.push((*cb, tx_owner));
                 }
             }
@@ -60,7 +89,12 @@ impl CallbackWalk<'_> {
             | ValueExpression::Null
             | ValueExpression::Array(..)
             | ValueExpression::Object(..) => {}
-            ValueExpression::Derived(..) | ValueExpression::Unknown if optional_non_callable => {}
+            ValueExpression::Unknown if optional_non_callable => {}
+            ValueExpression::Derived(parts) if optional_non_callable => {
+                for part in parts.iter() {
+                    self.inspect_arg(env, site, part, true, tx_owner, depth + 1);
+                }
+            }
             ValueExpression::Named { .. } | ValueExpression::Member(..) => {
                 self.inspect_named_or_member(env, site, arg, optional_non_callable, tx_owner, depth);
             }
@@ -85,9 +119,7 @@ impl CallbackWalk<'_> {
         if let Some(imported) = resolve_imported_expr(env, arg) {
             match imported {
                 ResolvedApi::Target(spec, export) => {
-                    self.diagnostics
-                        .findings
-                        .push(finding(env.ctx, site, (spec.as_str(), export.as_str())));
+                    self.report_publish(env, site, (spec.as_str(), export.as_str()));
                 }
                 ResolvedApi::Unanalyzable => self.emit_unprovable(env, site),
                 ResolvedApi::Other => {}
@@ -112,8 +144,8 @@ impl CallbackWalk<'_> {
     }
 
     fn emit_unprovable(&mut self, env: &FileEnv<'_>, site: &ResolvedCallSite) {
-        self.diagnostics.unanalyzable(env.ctx.policy, unanalyzable(env.ctx, site,
-            "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit"));
+        self.report_unanalyzable(env, site,
+            "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit");
     }
 }
 

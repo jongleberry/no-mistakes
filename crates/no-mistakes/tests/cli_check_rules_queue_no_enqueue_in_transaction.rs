@@ -92,20 +92,24 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     assert_eq!(handles["exitCode"], 1);
     assert_eq!(handles["report"]["advisories"], serde_json::json!([]));
     let handle_findings = handles["report"]["rules"].as_array().unwrap();
-    let mut handle_locations: Vec<_> = handle_findings
-        .iter()
-        .map(|finding| {
-            assert_eq!(finding["rule"], RULE);
-            assert_eq!(finding["target"], "@sample/jobs#enqueue");
-            (
-                finding["file"].as_str().unwrap(),
-                finding["line"].as_u64().unwrap(),
-            )
-        })
-        .collect();
-    handle_locations.sort_unstable();
+    let mut enqueue_locations = Vec::new();
+    let mut handle_unanalyzable = Vec::new();
+    for finding in handle_findings {
+        assert_eq!(finding["rule"], RULE);
+        let location = (
+            finding["file"].as_str().unwrap(),
+            finding["line"].as_u64().unwrap(),
+        );
+        match finding["target"].as_str() {
+            Some("@sample/jobs#enqueue") => enqueue_locations.push(location),
+            Some("unanalyzable") => handle_unanalyzable.push(location),
+            other => panic!("unexpected handle target {other:?}"),
+        }
+    }
+    enqueue_locations.sort_unstable();
+    handle_unanalyzable.sort_unstable();
     assert_eq!(
-        handle_locations,
+        enqueue_locations,
         [
             ("src/map-enqueue.ts", 6),
             ("src/map-enqueue.ts", 9),
@@ -116,8 +120,11 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
             ("src/map-enqueue.ts", 15),
             ("src/map-enqueue.ts", 16),
             ("src/map-enqueue.ts", 17),
+            ("src/shared-owner.ts", 10),
+            ("src/shared-owner.ts", 21),
         ]
     );
+    assert_eq!(handle_unanalyzable, [("src/shared-owner.ts", 9)]);
 
     let local_exports_report = &reports["local_exports"];
     assert_eq!(local_exports_report["exitCode"], 0);
@@ -211,6 +218,12 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
             && report_rows
                 .iter()
                 .all(|row| row["rule"] == RULE && row["target"] == "unanalyzable")
+    );
+    assert!(
+        report_rows
+            .iter()
+            .all(|row| row["file"] != "src/flows/diamond.ts"),
+        "a star-reexport diamond that never reaches a configured module must stay clean"
     );
     let advised = &reports["unanalyzable_advise"];
     assert_eq!(advised["exitCode"], 0);

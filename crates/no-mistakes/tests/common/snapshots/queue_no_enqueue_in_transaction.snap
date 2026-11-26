@@ -198,6 +198,33 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const aliasCallback = rows.map(aliasEnqueue)",
           "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/shared-owner.ts",
+          "import": "JSON.stringify",
+          "line": 21,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return withTx(async () => JSON.stringify(data, flag ? enqueue : null));",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/shared-owner.ts",
+          "import": "enqueue",
+          "line": 10,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return enqueue({ id: \"shared\" });",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/shared-owner.ts",
+          "import": "outer",
+          "line": 9,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "void outer(`SELECT 1`);",
+          "target": "unanalyzable"
         }
       ],
       "suppressed": [],

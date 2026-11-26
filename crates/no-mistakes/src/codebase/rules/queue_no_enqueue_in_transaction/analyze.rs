@@ -4,7 +4,6 @@ use super::options::{Api, Targets};
 use super::receivers::{classify_builtin_site, is_callback_param_handle, FileEnv};
 use super::reexports::{self, ResolvedApi};
 use super::transactions::collect_tx_callbacks;
-use super::{finding, unanalyzable};
 use crate::codebase::check_facts::CheckFactMap;
 use crate::codebase::dependencies::extract::{
     CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression, ValueType,
@@ -88,16 +87,17 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
             .map(|(scope, name, id)| ((*scope, name.as_str()), *id)).collect(),
     };
     let mut walk = CallbackWalk {
-        visited: tx_callbacks.iter().copied().collect(),
+        visited: tx_callbacks.iter().copied().map(|cb| (cb, cb)).collect(),
         worklist: tx_callbacks.iter().map(|&cb| (cb, cb)).collect(),
+        reported: FxHashSet::default(),
         diagnostics,
     };
-    let mut cursors: FxHashMap<(CallableId, u32, &str), usize> = FxHashMap::default();
+    let mut cursors: FxHashMap<(CallableId, CallableId, u32, &str), usize> = FxHashMap::default();
     while let Some((caller, tx_owner)) = walk.worklist.pop() {
         let Some(caller_sites) = sites_by_caller.get(&caller) else { continue; };
         for site in caller_sites {
             let key = site_key(site);
-            let cursor = cursors.entry((caller, key.0, key.1)).or_insert(0);
+            let cursor = cursors.entry((tx_owner, caller, key.0, key.1)).or_insert(0);
             let call = calls_by_key.get(&key)
                 .and_then(|list| list.iter().filter(|c| c.context == Some(caller)).nth(*cursor).copied());
             *cursor += 1;
@@ -124,13 +124,11 @@ fn check_callback_site(
                 &|m, e| ctx.targets.publishers.contains(&(m, e)),
             ) {
                 ResolvedApi::Target(spec, export) => {
-                    walk.diagnostics
-                        .findings
-                        .push(finding(ctx, site, (spec.as_str(), export.as_str())));
+                    walk.report_publish(env, site, (spec.as_str(), export.as_str()));
                 }
                 ResolvedApi::Unanalyzable => {
-                    walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
-                        "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit"));
+                    walk.report_unanalyzable(env, site,
+                        "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit");
                 }
                 ResolvedApi::Other => {}
             }
@@ -145,8 +143,8 @@ fn check_callback_site(
             )
         }) || site.has_unknown_target())
     {
-        walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
-            "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit"));
+        walk.report_unanalyzable(env, site,
+            "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit");
     } else if let ResolvedCallTarget::Global { name } = &site.target {
         if let (Some(builtin), Some(call)) = (builtins::global_target_callbacks(name), call) {
             walk.inspect_builtin(env, site, call, builtin, tx_owner);
@@ -159,8 +157,8 @@ fn check_callback_site(
         }) {
             walk.inspect_builtin(env, site, call, builtin, tx_owner);
         } else {
-            walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
-                "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit"));
+            walk.report_unanalyzable(env, site,
+                "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit");
         }
     }
 }

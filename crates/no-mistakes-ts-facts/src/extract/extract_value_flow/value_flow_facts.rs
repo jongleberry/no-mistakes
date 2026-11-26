@@ -1,10 +1,10 @@
-/// Syntactic value flow retained by the import collector. Resolution uses the
-/// prepared catalog and never reparses a factory or helper body.
+/// Syntactic value flow retained by the import collector without reparsing.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct ValueFlowFacts {
     pub catalogs: literal_catalogs::LiteralCatalogFacts,
     pub tagged_templates: TaggedTemplates,
     pub identifier_text_origins: Option<std::sync::Arc<TextOrigins>>,
+    pub builtin_const_bindings: FxHashMap<(usize, String), Option<String>>,
     pub sql_placeholder_lists: Vec<(usize, String, u32)>,
     /// Failed analysis must not supply definitive value-flow or graph answers.
     pub incomplete_reason: Option<String>,

@@ -63,6 +63,9 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
     let tx_callbacks = collect_tx_callbacks(ctx, file, sites, &calls_by_key, &imports, flow, diagnostics);
     let env = FileEnv {
         ctx, file, file_facts, imports, calls_by_span, sites_by_key, builtin_construct_offsets,
+        params: flow.parameters.iter()
+            .filter(|p| p.invalidated_at.is_none())
+            .map(|p| (p.scope, p.name.as_str())).collect(),
         callback_params: flow.parameters.iter()
             .filter(|p| tx_callbacks.contains(&p.owner) && p.invalidated_at.is_none())
             .map(|p| (p.owner, p.scope, p.name.as_str())).collect(),
@@ -72,10 +75,14 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
                 file_facts.imported_bindings.iter().any(|b| {
                     b.local == root
                         && reexports::binding_reaches_module(ctx, file, b, &ctx.targets.publisher_modules)
+                            .may_reach()
                 })
             }))
             .map(|p| (p.scope, p.name.as_str())).collect(),
         local_bindings: flow.bindings.iter()
+            .filter(|b| b.immutable && b.invalidated_at.is_none())
+            .map(|b| ((b.scope, b.name.as_str()), &b.value)).collect(),
+        iteration_bindings: flow.iteration_bindings.iter()
             .filter(|b| b.immutable && b.invalidated_at.is_none())
             .map(|b| ((b.scope, b.name.as_str()), &b.value)).collect(),
         local_callables: file_facts.callable_bindings.iter()
@@ -110,16 +117,23 @@ fn check_callback_site(
     let ctx = env.ctx;
     if let Some(api) = exact_target(site) {
         if !call.is_some_and(|c| c.bound) {
-            if let ResolvedApi::Target(spec, export) = reexports::follow_export(
+            match reexports::follow_export(
                 ctx,
                 env.file,
                 api.0,
                 api.1,
                 &|m, e| ctx.targets.publishers.contains(&(m, e)),
             ) {
-                walk.diagnostics
-                    .findings
-                    .push(finding(ctx, site, (spec.as_str(), export.as_str())));
+                ResolvedApi::Target(spec, export) => {
+                    walk.diagnostics
+                        .findings
+                        .push(finding(ctx, site, (spec.as_str(), export.as_str())));
+                }
+                ResolvedApi::Unanalyzable => {
+                    walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
+                        "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit"));
+                }
+                ResolvedApi::Other => {}
             }
         }
     } else if is_ambiguous(site)
@@ -129,7 +143,7 @@ fn check_callback_site(
                     reexports::follow_export(ctx, env.file, api.0, api.1, &|m, e| {
                         ctx.targets.publishers.contains(&(m, e))
                     }),
-                    ResolvedApi::Target(..)
+                    ResolvedApi::Target(..) | ResolvedApi::Unanalyzable
                 )
             }))
     {

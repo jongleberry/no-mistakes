@@ -24,6 +24,8 @@ export class ItemRunner {
         .map(defaultUtils.format)
         .filter(id => id.length > 0)
       const localSep = '-'
+      const trimmedSep = localSep.trim()
+      const seenAlias = seen
       for (const id of ids) {
         seen.add(id)
         byId.set(id, id.replace(/\s+/g, sep).replaceAll('_', localSep).replace(/x/, `a-${sep}`))
@@ -66,11 +68,13 @@ export class ItemRunner {
         absValues,
         fixedPi,
         trimmed,
+        trimmedSep,
         ownItems,
         localIds,
         fetchedLabels,
         tried,
         hasFirst: seen.has(ids[0] ?? ''),
+        hasAlias: seenAlias.has(ids[0] ?? ''),
       }
     })
   }

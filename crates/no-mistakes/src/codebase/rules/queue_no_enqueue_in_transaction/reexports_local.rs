@@ -5,113 +5,122 @@ use crate::codebase::ts_source::facts::TsFileFacts;
 use crate::fx::FxHashSet;
 use std::path::{Path, PathBuf};
 
-pub(super) fn classify_local_export(
+struct LocalWalk<'a, F> {
+    ctx: &'a Context<'a>,
+    target: &'a Path,
+    tf: &'a TsFileFacts,
+    is_target: &'a F,
+    visited: &'a mut FxHashSet<(PathBuf, String)>,
+}
+
+pub(super) fn classify_local_export<F: Fn(&str, &str) -> bool>(
     ctx: &Context<'_>,
     target: &Path,
     tf: &TsFileFacts,
     local: &str,
     rest: Option<&str>,
-    is_target: &impl Fn(&str, &str) -> bool,
+    is_target: &F,
     visited: &mut FxHashSet<(PathBuf, String)>,
 ) -> ResolvedApi {
-    if let Some(binding) = tf
-        .value_flow
-        .bindings
-        .iter()
-        .find(|b| b.scope == 0 && b.name == local && b.immutable && b.invalidated_at.is_none())
-    {
-        return classify_value_expr(
-            ctx,
-            target,
-            tf,
-            Some(local),
-            &binding.value,
-            rest,
-            is_target,
-            visited,
-        );
-    }
-    if is_local_function_or_class(tf, local) {
-        return ResolvedApi::Other;
-    }
-    ResolvedApi::Unanalyzable
+    let mut state = LocalWalk {
+        ctx,
+        target,
+        tf,
+        is_target,
+        visited,
+    };
+    state.classify_local(local, rest)
 }
 
-#[allow(clippy::too_many_arguments)]
-fn classify_value_expr(
-    ctx: &Context<'_>,
-    target: &Path,
-    tf: &TsFileFacts,
-    local: Option<&str>,
-    expr: &ValueExpression,
-    rest: Option<&str>,
-    is_target: &impl Fn(&str, &str) -> bool,
-    visited: &mut FxHashSet<(PathBuf, String)>,
-) -> ResolvedApi {
-    match expr {
-        ValueExpression::Callable(_) => ResolvedApi::Other,
-        ValueExpression::Object(fields, _) => rest
-            .and_then(|member| {
-                let (field, tail) = split_export(member);
-                fields.get(field).map(|field_expr| (field_expr, tail))
-            })
-            .map_or(ResolvedApi::Unanalyzable, |(field_expr, tail)| {
-                classify_value_expr(ctx, target, tf, None, field_expr, tail, is_target, visited)
-            }),
-        ValueExpression::Named { .. } | ValueExpression::Member(..) => {
-            follow_expr_alias(ctx, target, tf, expr, rest, is_target, visited)
-        }
-        ValueExpression::Unknown
-            if local.is_some_and(|name| is_local_function_or_class(tf, name)) =>
+impl<F: Fn(&str, &str) -> bool> LocalWalk<'_, F> {
+    fn classify_local(&mut self, local: &str, rest: Option<&str>) -> ResolvedApi {
+        if let Some(binding) = self
+            .tf
+            .value_flow
+            .bindings
+            .iter()
+            .find(|b| b.scope == 0 && b.name == local && b.immutable && b.invalidated_at.is_none())
         {
-            ResolvedApi::Other
+            return self.classify_value_expr(Some(local), &binding.value, rest);
         }
-        _ => ResolvedApi::Unanalyzable,
+        if is_local_function_or_class(self.tf, local) {
+            return ResolvedApi::Other;
+        }
+        ResolvedApi::Unanalyzable
     }
-}
 
-fn follow_expr_alias(
-    ctx: &Context<'_>,
-    target: &Path,
-    tf: &TsFileFacts,
-    expr: &ValueExpression,
-    rest: Option<&str>,
-    is_target: &impl Fn(&str, &str) -> bool,
-    visited: &mut FxHashSet<(PathBuf, String)>,
-) -> ResolvedApi {
-    let mut parts = Vec::new();
-    let mut cur = expr;
-    while let ValueExpression::Member(inner, prop) = cur {
-        parts.push(prop.as_str());
-        cur = inner.as_ref();
+    fn classify_value_expr(
+        &mut self,
+        local: Option<&str>,
+        expr: &ValueExpression,
+        rest: Option<&str>,
+    ) -> ResolvedApi {
+        match expr {
+            ValueExpression::Callable(_) => ResolvedApi::Other,
+            ValueExpression::Object(fields, _) => rest
+                .and_then(|member| {
+                    let (field, tail) = split_export(member);
+                    fields.get(field).map(|field_expr| (field_expr, tail))
+                })
+                .map_or(ResolvedApi::Unanalyzable, |(field_expr, tail)| {
+                    self.classify_value_expr(None, field_expr, tail)
+                }),
+            ValueExpression::Named { .. } | ValueExpression::Member(..) => {
+                self.follow_expr_alias(expr, rest)
+            }
+            ValueExpression::Unknown
+                if local.is_some_and(|name| is_local_function_or_class(self.tf, name)) =>
+            {
+                ResolvedApi::Other
+            }
+            _ => ResolvedApi::Unanalyzable,
+        }
     }
-    let ValueExpression::Named {
-        name,
-        scope: None | Some(0),
-        ..
-    } = cur
-    else {
-        return ResolvedApi::Unanalyzable;
-    };
-    parts.reverse();
-    if let Some(tail) = rest {
-        parts.push(tail);
+
+    fn follow_expr_alias(&mut self, expr: &ValueExpression, rest: Option<&str>) -> ResolvedApi {
+        let mut parts = Vec::new();
+        let mut cur = expr;
+        while let ValueExpression::Member(inner, prop) = cur {
+            parts.push(prop.as_str());
+            cur = inner.as_ref();
+        }
+        let ValueExpression::Named {
+            name,
+            scope: None | Some(0),
+            ..
+        } = cur
+        else {
+            return ResolvedApi::Unanalyzable;
+        };
+        parts.reverse();
+        if let Some(tail) = rest {
+            parts.push(tail);
+        }
+        let suffix = (!parts.is_empty()).then(|| parts.join("."));
+        if let Some(imp) = find_import(self.tf, name) {
+            return project_imported(imp, suffix.as_deref()).map_or(
+                ResolvedApi::Unanalyzable,
+                |next| {
+                    walk(
+                        self.ctx,
+                        self.target,
+                        &imp.specifier,
+                        &next,
+                        self.is_target,
+                        self.visited,
+                    )
+                },
+            );
+        }
+        let visit_key = match suffix.as_deref() {
+            Some(tail) => format!("\0{name}.{tail}"),
+            None => format!("\0{name}"),
+        };
+        if !self.visited.insert((self.target.to_path_buf(), visit_key)) {
+            return ResolvedApi::Unanalyzable;
+        }
+        self.classify_local(name, suffix.as_deref())
     }
-    let suffix = (!parts.is_empty()).then(|| parts.join("."));
-    if let Some(imp) = find_import(tf, name) {
-        return project_imported(imp, suffix.as_deref()).map_or(
-            ResolvedApi::Unanalyzable,
-            |next| walk(ctx, target, &imp.specifier, &next, is_target, visited),
-        );
-    }
-    let visit_key = match suffix.as_deref() {
-        Some(tail) => format!("\0{name}.{tail}"),
-        None => format!("\0{name}"),
-    };
-    if !visited.insert((target.to_path_buf(), visit_key)) {
-        return ResolvedApi::Unanalyzable;
-    }
-    classify_local_export(ctx, target, tf, name, suffix.as_deref(), is_target, visited)
 }
 
 fn is_local_function_or_class(tf: &TsFileFacts, local: &str) -> bool {

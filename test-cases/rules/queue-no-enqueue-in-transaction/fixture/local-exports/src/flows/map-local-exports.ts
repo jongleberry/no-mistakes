@@ -1,5 +1,6 @@
 import { transaction } from "@sample/database";
 import defaultToDto, {
+  type Row,
   RowClassExpr,
   RowDto,
   dtoHelpers,
@@ -14,8 +15,9 @@ import * as dtoNs from "../dto";
 import DefaultRowClass from "../default-class";
 import { BarrelRowDto, barrelToDto, barrelToDtoArrow } from "../dto-barrel";
 
-export function mapRowsInTransaction(rows: { id: string }[]) {
+export function mapRowsInTransaction(rows: Row[]) {
   return transaction("write", async () => {
+    const direct = toDto({ id: "direct" });
     const mapped = rows.map(toDto);
     const renamed = rows.map(renamedToDto);
     const viaClass = rows.map(RowDto.fromRow);
@@ -32,6 +34,7 @@ export function mapRowsInTransaction(rows: { id: string }[]) {
     const viaBarrelClass = rows.map(BarrelRowDto.fromRow);
     const viaBarrelArrow = rows.map(barrelToDtoArrow);
     return {
+      direct,
       mapped,
       renamed,
       viaClass,

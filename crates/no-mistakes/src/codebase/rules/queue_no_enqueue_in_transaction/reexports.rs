@@ -1,7 +1,5 @@
 use super::analyze::Context;
-use crate::codebase::dependencies::extract::{
-    ExportedBinding, ImportedBinding, ImportedBindingKind,
-};
+use crate::codebase::dependencies::extract::{ImportedBinding, ImportedBindingKind};
 use crate::codebase::dependencies::graph::{ImportTarget, TsFactLookup};
 use crate::codebase::ts_source::facts::TsFileFacts;
 use crate::fx::FxHashSet;
@@ -9,6 +7,10 @@ use std::path::{Path, PathBuf};
 
 #[path = "reexports_local.rs"]
 mod local;
+#[path = "reexports_reach.rs"]
+mod reach;
+
+pub(super) use reach::{binding_reaches_module, reaches_module};
 
 pub(super) enum ResolvedApi {
     Target(String, String),
@@ -95,85 +97,6 @@ fn find_import<'a>(tf: &'a TsFileFacts, local: &str) -> Option<&'a ImportedBindi
 
 fn split_export(export: &str) -> (&str, Option<&str>) {
     export.split_once('.').map_or((export, None), |(h, r)| (h, Some(r)))
-}
-
-pub(super) fn binding_reaches_module(
-    ctx: &Context<'_>,
-    from: &Path,
-    binding: &ImportedBinding,
-    modules: &FxHashSet<&str>,
-) -> bool {
-    let export = (binding.kind != ImportedBindingKind::Namespace).then_some(binding.imported.as_str());
-    reaches_module(ctx, from, &binding.specifier, export, modules)
-}
-
-pub(super) fn reaches_module(
-    ctx: &Context<'_>,
-    from: &Path,
-    specifier: &str,
-    export: Option<&str>,
-    modules: &FxHashSet<&str>,
-) -> bool {
-    fn walk(
-        ctx: &Context<'_>,
-        from: &Path,
-        spec: &str,
-        export: Option<&str>,
-        modules: &FxHashSet<&str>,
-        visited: &mut FxHashSet<(PathBuf, Option<String>)>,
-    ) -> bool {
-        if modules.contains(spec) {
-            return true;
-        }
-        let Some(ImportTarget::File(target)) =
-            ctx.graph.import_targets.get(from).and_then(|m| m.get(spec))
-        else {
-            return false;
-        };
-        if !visited.insert((target.clone(), export.map(str::to_owned))) {
-            return false;
-        }
-        let Some(tf) = ctx.facts.get_ts_facts(target) else {
-            return false;
-        };
-        let mut exports = tf.exported_bindings.iter().chain(tf.value_flow.type_exports.iter());
-        if let Some(name) = export {
-            let mut matched = false;
-            for eb in exports.filter(|eb| eb.exported == name) {
-                matched = true;
-                if export_binding_reaches(ctx, target, tf, eb, modules, visited) {
-                    return true;
-                }
-            }
-            return !matched
-                && tf.star_reexport_specifiers.iter().any(|s| walk(ctx, target, s, Some(name), modules, visited));
-        }
-        tf.star_reexport_specifiers.iter().any(|s| walk(ctx, target, s, None, modules, visited))
-            || exports.any(|eb| export_binding_reaches(ctx, target, tf, eb, modules, visited))
-    }
-
-    fn export_binding_reaches(
-        ctx: &Context<'_>,
-        target: &Path,
-        tf: &TsFileFacts,
-        eb: &ExportedBinding,
-        modules: &FxHashSet<&str>,
-        visited: &mut FxHashSet<(PathBuf, Option<String>)>,
-    ) -> bool {
-        if let Some(next_spec) = &eb.specifier {
-            let next_export = (eb.local != "*").then_some(eb.local.as_str());
-            return walk(ctx, target, next_spec, next_export, modules, visited);
-        }
-        tf.imported_bindings
-            .iter()
-            .chain(tf.value_flow.commonjs_imported_bindings.iter())
-            .find(|b| b.local == eb.local)
-            .is_some_and(|imp| {
-                let next_export = (imp.kind != ImportedBindingKind::Namespace).then_some(imp.imported.as_str());
-                walk(ctx, target, &imp.specifier, next_export, modules, visited)
-            })
-    }
-    walk(ctx, from, specifier, export, modules, &mut FxHashSet::default())
 }
 
 fn project_export(local: &str, rest: Option<&str>) -> Option<String> {

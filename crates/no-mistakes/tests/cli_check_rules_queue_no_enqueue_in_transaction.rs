@@ -6,6 +6,7 @@ const RULE: &str = "queue-no-enqueue-in-transaction";
 fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let root = rules_path(RULE, "fixture", "behavior");
     let handles = rules_path(RULE, "fixture", "handles-and-builtins");
+    let local_exports = rules_path(RULE, "fixture", "local-exports");
     let reexports = rules_path(RULE, "fixture", "reexports");
     let incomplete = rules_path(RULE, "fixture", "incomplete");
     let unanalyzable = rules_path(RULE, "fixture", "unanalyzable");
@@ -19,6 +20,11 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
                 "handles_and_builtins",
                 handles.clone(),
                 handles.join(".no-mistakes.yml"),
+            ),
+            (
+                "local_exports",
+                local_exports.clone(),
+                local_exports.join(".no-mistakes.yml"),
             ),
             (
                 "reexports",
@@ -113,6 +119,17 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
         ]
     );
 
+    let local_exports_report = &reports["local_exports"];
+    assert_eq!(local_exports_report["exitCode"], 0);
+    assert_eq!(
+        local_exports_report["report"]["rules"],
+        serde_json::json!([])
+    );
+    assert_eq!(
+        local_exports_report["report"]["advisories"],
+        serde_json::json!([])
+    );
+
     let reexports_report = &reports["reexports"];
     assert_eq!(reexports_report["exitCode"], 1);
     assert_eq!(
@@ -136,6 +153,21 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     assert_eq!(
         reexport_hits,
         [
+            (
+                "src/flows/const-alias-reexports.ts",
+                6,
+                "@sample/jobs#enqueue"
+            ),
+            (
+                "src/flows/const-alias-reexports.ts",
+                7,
+                "@sample/jobs#enqueue"
+            ),
+            (
+                "src/flows/const-alias-reexports.ts",
+                8,
+                "@sample/jobs#enqueue"
+            ),
             ("src/flows/named-reexports.ts", 17, "@sample/jobs#enqueue"),
             ("src/flows/named-reexports.ts", 18, "@sample/jobs#enqueue"),
             ("src/flows/named-reexports.ts", 19, "@sample/jobs#enqueue"),

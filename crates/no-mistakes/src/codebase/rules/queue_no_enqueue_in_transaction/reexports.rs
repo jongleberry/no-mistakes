@@ -7,9 +7,12 @@ use crate::codebase::ts_source::facts::TsFileFacts;
 use crate::fx::FxHashSet;
 use std::path::{Path, PathBuf};
 
+#[path = "reexports_local.rs"]
+mod local;
+
 pub(super) enum ResolvedApi {
     Target(String, String),
-    ExternalOther,
+    Other,
     Unanalyzable,
 }
 
@@ -31,60 +34,67 @@ pub(super) fn follow_export(
     export: &str,
     is_target: &impl Fn(&str, &str) -> bool,
 ) -> ResolvedApi {
-    fn walk(
-        ctx: &Context<'_>,
-        from: &Path,
-        specifier: &str,
-        export: &str,
-        is_target: &impl Fn(&str, &str) -> bool,
-        visited: &mut FxHashSet<(PathBuf, String)>,
-    ) -> ResolvedApi {
-        if is_target(specifier, export) {
-            return ResolvedApi::Target(specifier.to_owned(), export.to_owned());
-        }
-        let Some(ImportTarget::File(target)) =
-            ctx.graph.import_targets.get(from).and_then(|m| m.get(specifier))
-        else {
-            return if specifier.starts_with('.') || specifier.starts_with('/') {
-                ResolvedApi::Unanalyzable
-            } else {
-                ResolvedApi::ExternalOther
-            };
-        };
-        if !visited.insert((target.clone(), export.to_owned())) {
-            return ResolvedApi::Unanalyzable;
-        }
-        let Some(tf) = ctx
-            .facts
-            .get_ts_facts(target)
-            .filter(|f| f.parse_error.is_none() && f.operational_error.is_none())
-        else {
-            return ResolvedApi::Unanalyzable;
-        };
-        let (head, rest) = export.split_once('.').map_or((export, None), |(h, r)| (h, Some(r)));
-        let Some(eb) = tf.exported_bindings.iter().find(|eb| eb.exported == head) else {
-            return ResolvedApi::Unanalyzable;
-        };
-        if let Some(next_spec) = &eb.specifier {
-            let Some(next_export) = project_export(&eb.local, rest) else {
-                return ResolvedApi::Unanalyzable;
-            };
-            return walk(ctx, target, next_spec, &next_export, is_target, visited);
-        }
-        let Some(imp) = tf
-            .imported_bindings
-            .iter()
-            .chain(tf.value_flow.commonjs_imported_bindings.iter())
-            .find(|b| !b.is_type_only && b.local == eb.local)
-        else {
-            return ResolvedApi::Unanalyzable;
-        };
-        let Some(next_export) = project_imported(imp, rest) else {
-            return ResolvedApi::Unanalyzable;
-        };
-        walk(ctx, target, &imp.specifier, &next_export, is_target, visited)
-    }
     walk(ctx, from, specifier, export, is_target, &mut FxHashSet::default())
+}
+
+fn walk(
+    ctx: &Context<'_>,
+    from: &Path,
+    specifier: &str,
+    export: &str,
+    is_target: &impl Fn(&str, &str) -> bool,
+    visited: &mut FxHashSet<(PathBuf, String)>,
+) -> ResolvedApi {
+    if is_target(specifier, export) {
+        return ResolvedApi::Target(specifier.to_owned(), export.to_owned());
+    }
+    let Some(ImportTarget::File(target)) =
+        ctx.graph.import_targets.get(from).and_then(|m| m.get(specifier))
+    else {
+        return if specifier.starts_with('.') || specifier.starts_with('/') {
+            ResolvedApi::Unanalyzable
+        } else {
+            ResolvedApi::Other
+        };
+    };
+    if !visited.insert((target.clone(), export.to_owned())) {
+        return ResolvedApi::Unanalyzable;
+    }
+    let Some(tf) = ctx
+        .facts
+        .get_ts_facts(target)
+        .filter(|f| f.parse_error.is_none() && f.operational_error.is_none())
+    else {
+        return ResolvedApi::Unanalyzable;
+    };
+    let (head, rest) = split_export(export);
+    let Some(eb) = tf.exported_bindings.iter().find(|eb| eb.exported == head) else {
+        return ResolvedApi::Unanalyzable;
+    };
+    if let Some(next_spec) = &eb.specifier {
+        let Some(next_export) = project_export(&eb.local, rest) else {
+            return ResolvedApi::Unanalyzable;
+        };
+        return walk(ctx, target, next_spec, &next_export, is_target, visited);
+    }
+    let Some(imp) = find_import(tf, &eb.local) else {
+        return local::classify_local_export(ctx, target, tf, &eb.local, rest, is_target, visited);
+    };
+    let Some(next_export) = project_imported(imp, rest) else {
+        return ResolvedApi::Unanalyzable;
+    };
+    walk(ctx, target, &imp.specifier, &next_export, is_target, visited)
+}
+
+fn find_import<'a>(tf: &'a TsFileFacts, local: &str) -> Option<&'a ImportedBinding> {
+    tf.imported_bindings
+        .iter()
+        .chain(tf.value_flow.commonjs_imported_bindings.iter())
+        .find(|b| !b.is_type_only && b.local == local)
+}
+
+fn split_export(export: &str) -> (&str, Option<&str>) {
+    export.split_once('.').map_or((export, None), |(h, r)| (h, Some(r)))
 }
 
 pub(super) fn binding_reaches_module(

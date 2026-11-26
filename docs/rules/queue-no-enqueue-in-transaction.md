@@ -16,8 +16,9 @@ and export name, following named local re-exports (including renamed barrels suc
 `export { enqueue as send } from "@sample/jobs"`) to their source specifier. An
 imported alias such as `import { enqueue as publish } from "@sample/jobs"` retains
 the `enqueue` export identity. Configure each source module specifier and export the
-resolver exposes for your calls. Local functions that shadow an imported name and
-calls imported from unrelated modules stay outside the check.
+resolver exposes for your calls. Local functions that shadow an imported name, calls imported from unrelated
+modules, and local function, class, or static `const` declarations exported
+from relative modules stay outside the check.
 
 The transaction call must use a direct import binding so its argument positions
 can be proved, and the configured argument must be an inline arrow or

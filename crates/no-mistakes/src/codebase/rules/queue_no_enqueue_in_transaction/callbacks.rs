@@ -90,7 +90,7 @@ impl CallbackWalk<'_> {
                         .push(finding(env.ctx, site, (spec.as_str(), export.as_str())));
                 }
                 ResolvedApi::Unanalyzable => self.emit_unprovable(env, site),
-                ResolvedApi::ExternalOther => {}
+                ResolvedApi::Other => {}
             }
             return;
         }

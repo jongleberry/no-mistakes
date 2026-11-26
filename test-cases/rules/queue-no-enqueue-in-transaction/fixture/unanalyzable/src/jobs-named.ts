@@ -1,0 +1,8 @@
+import * as importedJobsNs from "@sample/jobs";
+export { enqueue, enqueue as send, createQueue } from "@sample/jobs";
+export * as jobsNs from "@sample/jobs";
+export { importedJobsNs as localJobsNs };
+export { enqueue as sendViaStar } from "./jobs-star";
+export { enqueue as missingSend } from "./jobs-missing";
+export type { Queue, QueueAdder } from "@sample/jobs";
+export const opaqueSend = (_row: { id: string }) => {};

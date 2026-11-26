@@ -6,6 +6,7 @@ const RULE: &str = "queue-no-enqueue-in-transaction";
 fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let root = rules_path(RULE, "fixture", "behavior");
     let handles = rules_path(RULE, "fixture", "handles-and-builtins");
+    let reexports = rules_path(RULE, "fixture", "reexports");
     let incomplete = rules_path(RULE, "fixture", "incomplete");
     let unanalyzable = rules_path(RULE, "fixture", "unanalyzable");
     let directive_audit = rules_path(RULE, "fixture", "directive-audit");
@@ -18,6 +19,11 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
                 "handles_and_builtins",
                 handles.clone(),
                 handles.join(".no-mistakes.yml"),
+            ),
+            (
+                "reexports",
+                reexports.clone(),
+                reexports.join(".no-mistakes.yml"),
             ),
             (
                 "incomplete",
@@ -104,6 +110,52 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
             ("src/map-enqueue.ts", 15),
             ("src/map-enqueue.ts", 16),
             ("src/map-enqueue.ts", 17),
+        ]
+    );
+
+    let reexports_report = &reports["reexports"];
+    assert_eq!(reexports_report["exitCode"], 1);
+    assert_eq!(
+        reexports_report["report"]["advisories"],
+        serde_json::json!([])
+    );
+    let mut reexport_hits: Vec<_> = reexports_report["report"]["rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|finding| {
+            assert_eq!(finding["rule"], RULE);
+            (
+                finding["file"].as_str().unwrap(),
+                finding["line"].as_u64().unwrap(),
+                finding["target"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    reexport_hits.sort_unstable();
+    assert_eq!(
+        reexport_hits,
+        [
+            ("src/flows/named-reexports.ts", 17, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 18, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 19, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 20, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 21, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 22, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 23, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 24, "@sample/jobs#enqueue"),
+            ("src/flows/named-reexports.ts", 25, "@sample/jobs#enqueue"),
+            (
+                "src/flows/named-reexports.ts",
+                33,
+                "./local-jobs#enqueueLocal"
+            ),
+            (
+                "src/flows/named-reexports.ts",
+                34,
+                "./local-jobs#enqueueLocal"
+            ),
+            ("src/flows/named-reexports.ts", 40, "@sample/jobs#enqueue"),
         ]
     );
     let incomplete = &reports["incomplete"]["report"];

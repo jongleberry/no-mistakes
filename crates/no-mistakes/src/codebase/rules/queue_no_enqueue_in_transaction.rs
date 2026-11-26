@@ -14,6 +14,7 @@ mod builtins;
 mod callbacks;
 mod options;
 mod receivers;
+mod reexports;
 mod transactions;
 use options::{Api, Options};
 

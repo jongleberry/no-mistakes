@@ -12,11 +12,12 @@ before committing and publishers whose effects survive rollback.
 ## What it catches
 
 The rule matches a transaction call and a publish by their resolved import specifier
-and export name. An imported alias such as `import { enqueue as publish } from
-"@sample/jobs"` retains the `enqueue` export identity. Configure each module
-specifier and export the resolver exposes for your calls. Local functions that
-shadow an imported name and calls imported from unrelated modules stay outside
-the check.
+and export name, following named local re-exports (including renamed barrels such as
+`export { enqueue as send } from "@sample/jobs"`) to their source specifier. An
+imported alias such as `import { enqueue as publish } from "@sample/jobs"` retains
+the `enqueue` export identity. Configure each source module specifier and export the
+resolver exposes for your calls. Local functions that shadow an imported name and
+calls imported from unrelated modules stay outside the check.
 
 The transaction call must use a direct import binding so its argument positions
 can be proved, and the configured argument must be an inline arrow or
@@ -42,7 +43,8 @@ by default, or `advise` / `ignore`):
 
 - Unresolved or ambiguous transaction or publish targets (including unresolved
   imports, dynamic callees, dynamic receivers, publisher-module factory returns,
-  nullish/alternative call targets, and wildcard re-exports).
+  nullish/alternative call targets, wildcard re-exports, and unresolvable or
+  cyclic local re-exports).
 - Unprovable, spread, or generator callbacks passed to built-in methods inside
   a transaction callback.
 - Bound, aliased, or factory-returned transaction calls, and tagged template

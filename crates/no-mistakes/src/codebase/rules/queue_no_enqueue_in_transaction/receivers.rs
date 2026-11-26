@@ -1,6 +1,6 @@
 use super::analyze::{exact_target, CallKey, Context};
 use super::builtins::{self, BuiltinCall};
-use super::transactions::specifier_reaches_module;
+use super::reexports::{self, ResolvedApi};
 use crate::codebase::dependencies::extract::{
     CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression,
 };
@@ -97,7 +97,7 @@ fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) 
         .iter()
         .map(|(m, _, _)| m.as_str())
         .chain(site.typed_from.iter().map(|(m, _)| m.as_str()))
-        .any(|m| specifier_reaches_module(env.ctx, env.file, m, mods))
+        .any(|m| reexports::reaches_module(env.ctx, env.file, m, None, mods))
 }
 
 fn is_local_or_builtin_receiver(
@@ -158,7 +158,16 @@ fn inner_call_is_clean(
                                 | ResolvedCallTarget::Global { .. } => true,
                                 ResolvedCallTarget::ModuleExport { .. } => {
                                     exact_target(site).is_some_and(|api| {
-                                        !env.ctx.targets.publishers.contains(&api)
+                                        !matches!(
+                                            reexports::follow_export(
+                                                env.ctx,
+                                                env.file,
+                                                api.0,
+                                                api.1,
+                                                &|m, e| env.ctx.targets.publishers.contains(&(m, e)),
+                                            ),
+                                            ResolvedApi::Target(..)
+                                        )
                                     })
                                 }
                                 ResolvedCallTarget::Unknown => {

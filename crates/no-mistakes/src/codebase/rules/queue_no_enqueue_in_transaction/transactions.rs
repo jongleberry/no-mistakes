@@ -1,14 +1,14 @@
 use super::analyze::{any_candidate_matches, exact_target, is_ambiguous, site_key, CallKey, Context};
+use super::options::Api;
+use super::reexports::{self, ResolvedApi};
 use super::unanalyzable;
 use crate::codebase::dependencies::extract::{
     CallableId, ImportedBinding, InvocationKind, ValueCall, ValueExpression, ValueFlowFacts,
 };
-use crate::codebase::dependencies::graph::{
-    ImportTarget, ResolvedCallSite, ResolvedCallTarget, TsFactLookup,
-};
+use crate::codebase::dependencies::graph::{ResolvedCallSite, ResolvedCallTarget};
 use crate::codebase::rules::analysis_policy::AnalysisDiagnostics;
 use crate::fx::{FxHashMap, FxHashSet};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub(super) fn collect_tx_callbacks(
     ctx: &Context<'_>,
@@ -26,14 +26,14 @@ pub(super) fn collect_tx_callbacks(
         let cursor = cursors.entry(key).or_insert(0);
         let call = calls_by_key.get(&key).and_then(|list| list.get(*cursor).copied());
         *cursor += 1;
-        if let Some(index) = exact_target(site).and_then(|api| ctx.targets.transactions.get(&api).copied()) {
+        if let Some(index) = exact_target(site).and_then(|api| transaction_index(ctx, file, api)) {
             let non_tagged = call.filter(|c| !flow.tagged_templates.contains_key(&(c.offset, c.end)));
             match callback_for_transaction(site, index, non_tagged, imports, &flow.generator_callables) {
                 Ok(cb) => { callbacks.insert(cb); }
                 Err(reason) => diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site, reason)),
             }
         } else if is_ambiguous(site)
-            && any_candidate_matches(site, |api| ctx.targets.transactions.contains_key(&api))
+            && any_candidate_matches(site, |api| transaction_index(ctx, file, api).is_some())
         {
             diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
                 "ambiguous call target may invoke a configured transaction; call the imported transaction directly"));
@@ -76,6 +76,15 @@ fn callback_for_transaction(
     Ok(*callback)
 }
 
+fn transaction_index(ctx: &Context<'_>, file: &Path, api: Api<'_>) -> Option<usize> {
+    match reexports::follow_export(ctx, file, api.0, api.1, &|m, e| {
+        ctx.targets.transactions.contains_key(&(m, e))
+    }) {
+        ResolvedApi::Target(m, e) => ctx.targets.transactions.get(&(m.as_str(), e.as_str())).copied(),
+        _ => None,
+    }
+}
+
 fn unresolved_transaction_site(
     ctx: &Context<'_>,
     file: &Path,
@@ -85,52 +94,23 @@ fn unresolved_transaction_site(
 ) -> bool {
     let (mods, txs) = (&ctx.targets.transaction_modules, &ctx.targets.transactions);
     for (m, e) in &site.returned_from {
-        if mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())) {
+        if reexports::reaches_module(ctx, file, m, None, mods)
+            && !txs.contains_key(&(m.as_str(), e.as_str()))
+        {
             return true;
         }
     }
     for (m, e, _) in &site.returned_member_from {
-        if mods.contains(m.as_str()) && !txs.contains_key(&(m.as_str(), e.as_str())) {
+        if reexports::reaches_module(ctx, file, m, None, mods)
+            && !txs.contains_key(&(m.as_str(), e.as_str()))
+        {
             return true;
         }
     }
     let Some(binding) = call.and_then(|c| root_ident(&c.callee)).and_then(|name| imports.get(name)) else {
         return false;
     };
-    specifier_reaches_module(ctx, file, &binding.specifier, mods)
-}
-
-pub(super) fn specifier_reaches_module(
-    ctx: &Context<'_>,
-    from: &Path,
-    specifier: &str,
-    modules: &FxHashSet<&str>,
-) -> bool {
-    fn walk(
-        ctx: &Context<'_>,
-        from: &Path,
-        spec: &str,
-        modules: &FxHashSet<&str>,
-        visited: &mut FxHashSet<PathBuf>,
-    ) -> bool {
-        if modules.contains(spec) {
-            return true;
-        }
-        let Some(ImportTarget::File(target)) =
-            ctx.graph.import_targets.get(from).and_then(|m| m.get(spec))
-        else {
-            return false;
-        };
-        if !visited.insert(target.clone()) {
-            return false;
-        }
-        ctx.facts.get_ts_facts(target).is_some_and(|tf| {
-            tf.star_reexport_specifiers
-                .iter()
-                .any(|s| walk(ctx, target, s, modules, visited))
-        })
-    }
-    walk(ctx, from, specifier, modules, &mut FxHashSet::default())
+    reexports::binding_reaches_module(ctx, file, binding, mods)
 }
 
 fn root_ident(mut expr: &ValueExpression) -> Option<&str> {

@@ -2,7 +2,8 @@ use super::builtins;
 use super::callbacks::CallbackWalk;
 use super::options::{Api, Targets};
 use super::receivers::{classify_builtin_site, is_callback_param_handle, FileEnv};
-use super::transactions::{collect_tx_callbacks, specifier_reaches_module};
+use super::reexports::{self, ResolvedApi};
+use super::transactions::collect_tx_callbacks;
 use super::{finding, unanalyzable};
 use crate::codebase::check_facts::CheckFactMap;
 use crate::codebase::dependencies::extract::{
@@ -70,7 +71,7 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
                 let root = name.split_once('.').map_or(name.as_str(), |(root, _)| root);
                 file_facts.imported_bindings.iter().any(|b| {
                     b.local == root
-                        && specifier_reaches_module(ctx, file, &b.specifier, &ctx.targets.publisher_modules)
+                        && reexports::binding_reaches_module(ctx, file, b, &ctx.targets.publisher_modules)
                 })
             }))
             .map(|p| (p.scope, p.name.as_str())).collect(),
@@ -108,11 +109,29 @@ fn check_callback_site(
 ) {
     let ctx = env.ctx;
     if let Some(api) = exact_target(site) {
-        if ctx.targets.publishers.contains(&api) && !call.is_some_and(|c| c.bound) {
-            walk.diagnostics.findings.push(finding(ctx, site, api));
+        if !call.is_some_and(|c| c.bound) {
+            if let ResolvedApi::Target(spec, export) = reexports::follow_export(
+                ctx,
+                env.file,
+                api.0,
+                api.1,
+                &|m, e| ctx.targets.publishers.contains(&(m, e)),
+            ) {
+                walk.diagnostics
+                    .findings
+                    .push(finding(ctx, site, (spec.as_str(), export.as_str())));
+            }
         }
     } else if is_ambiguous(site)
-        && (site.has_unknown_target() || any_candidate_matches(site, |api| ctx.targets.publishers.contains(&api)))
+        && (site.has_unknown_target()
+            || any_candidate_matches(site, |api| {
+                matches!(
+                    reexports::follow_export(ctx, env.file, api.0, api.1, &|m, e| {
+                        ctx.targets.publishers.contains(&(m, e))
+                    }),
+                    ResolvedApi::Target(..)
+                )
+            }))
     {
         walk.diagnostics.unanalyzable(ctx.policy, unanalyzable(ctx, site,
             "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit"));

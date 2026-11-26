@@ -1,14 +1,11 @@
-use super::analyze::Context;
 use super::builtins::{self, BuiltinCall};
 use super::receivers::{is_param_expr, FileEnv};
+use super::reexports::{self, ResolvedApi};
 use super::{finding, unanalyzable};
-use crate::codebase::dependencies::extract::{
-    CallableId, ImportedBindingKind, ValueCall, ValueExpression,
-};
-use crate::codebase::dependencies::graph::{ImportTarget, ResolvedCallSite, TsFactLookup};
+use crate::codebase::dependencies::extract::{CallableId, ValueCall, ValueExpression};
+use crate::codebase::dependencies::graph::ResolvedCallSite;
 use crate::codebase::rules::analysis_policy::AnalysisDiagnostics;
 use crate::fx::FxHashSet;
-use std::path::Path;
 
 pub(super) struct CallbackWalk<'a> {
     pub(super) worklist: Vec<(CallableId, CallableId)>,
@@ -87,13 +84,13 @@ impl CallbackWalk<'_> {
         }
         if let Some(imported) = resolve_imported_expr(env, arg) {
             match imported {
-                ImportedExpr::Publisher(spec, export) => {
+                ResolvedApi::Target(spec, export) => {
                     self.diagnostics
                         .findings
-                        .push(finding(env.ctx, site, (spec, export.as_str())));
+                        .push(finding(env.ctx, site, (spec.as_str(), export.as_str())));
                 }
-                ImportedExpr::StarReexport => self.emit_unprovable(env, site),
-                ImportedExpr::Other => {}
+                ResolvedApi::Unanalyzable => self.emit_unprovable(env, site),
+                ResolvedApi::ExternalOther => {}
             }
             return;
         }
@@ -120,13 +117,7 @@ impl CallbackWalk<'_> {
     }
 }
 
-enum ImportedExpr<'a> {
-    Publisher(&'a str, String),
-    StarReexport,
-    Other,
-}
-
-fn resolve_imported_expr<'a>(env: &FileEnv<'a>, expr: &ValueExpression) -> Option<ImportedExpr<'a>> {
+fn resolve_imported_expr(env: &FileEnv<'_>, expr: &ValueExpression) -> Option<ResolvedApi> {
     let mut parts = Vec::new();
     let mut cur = expr;
     while let ValueExpression::Member(inner, prop) = cur {
@@ -139,34 +130,7 @@ fn resolve_imported_expr<'a>(env: &FileEnv<'a>, expr: &ValueExpression) -> Optio
     let binding = env.imports.get(name.as_str())?;
     parts.reverse();
     let suffix = (!parts.is_empty()).then(|| parts.join("."));
-    if has_star_reexport(env.ctx, env.file, &binding.specifier) {
-        return Some(ImportedExpr::StarReexport);
-    }
-    let base = match binding.kind {
-        ImportedBindingKind::Namespace => "",
-        ImportedBindingKind::Named => binding.imported.as_str(),
-        ImportedBindingKind::Default => "default",
-    };
-    let export = match (base, suffix) {
-        ("", Some(s)) => s,
-        ("", None) => return None,
-        (b, Some(s)) => format!("{b}.{s}"),
-        (b, None) => b.to_owned(),
-    };
-    if env.ctx.targets.publishers.contains(&(binding.specifier.as_str(), export.as_str())) {
-        Some(ImportedExpr::Publisher(binding.specifier.as_str(), export))
-    } else {
-        Some(ImportedExpr::Other)
-    }
-}
-
-fn has_star_reexport(ctx: &Context<'_>, from: &Path, specifier: &str) -> bool {
-    let Some(ImportTarget::File(target)) =
-        ctx.graph.import_targets.get(from).and_then(|m| m.get(specifier))
-    else {
-        return false;
-    };
-    ctx.facts
-        .get_ts_facts(target)
-        .is_some_and(|tf| !tf.star_reexport_specifiers.is_empty())
+    reexports::resolve_binding_api(env.ctx, env.file, binding, suffix.as_deref(), |m, e| {
+        env.ctx.targets.publishers.contains(&(m, e))
+    })
 }

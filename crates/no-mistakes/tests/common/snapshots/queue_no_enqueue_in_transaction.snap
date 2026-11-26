@@ -234,6 +234,19 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
       "warnings": []
     }
   },
+  "local_exports": {
+    "exitCode": 0,
+    "report": {
+      "advisories": [],
+      "codebase": [],
+      "integration": [],
+      "queues": [],
+      "react": [],
+      "rules": [],
+      "suppressed": [],
+      "warnings": []
+    }
+  },
   "reexports": {
     "exitCode": 1,
     "report": {
@@ -243,6 +256,33 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
       "queues": [],
       "react": [],
       "rules": [
+        {
+          "file": "src/flows/const-alias-reexports.ts",
+          "import": "rows.map",
+          "line": 6,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(constAliasSend);",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/flows/const-alias-reexports.ts",
+          "import": "rows.map",
+          "line": 7,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(constNsAliasSend);",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/flows/const-alias-reexports.ts",
+          "import": "rows.map",
+          "line": 8,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(constObjSend.send);",
+          "target": "@sample/jobs#enqueue"
+        },
         {
           "file": "src/flows/named-reexports.ts",
           "import": "enqueue",
@@ -637,6 +677,60 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await typedQueue.add({ receiptId: \"typed-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 13,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(opaqueMemberSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 14,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(spreadJobs.enqueue);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 15,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 16,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(mutableSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 17,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(localCycleA);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 18,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map((objHelpers as unknown as { missing: (row: { id: string }) => unknown }).missing);",
           "target": "unanalyzable"
         },
         {
@@ -1074,6 +1168,60 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "await typedQueue.add({ receiptId: \"typed-publisher\" });",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 13,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(opaqueMemberSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 14,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(spreadJobs.enqueue);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 15,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(constNsAlias as unknown as (row: { id: string }) => unknown);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 16,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(mutableSend);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 17,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map(localCycleA);",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/flows/local-export-unanalyzable.ts",
+          "import": "rows.map",
+          "line": 18,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "rows.map((objHelpers as unknown as { missing: (row: { id: string }) => unknown }).missing);",
           "target": "unanalyzable"
         },
         {

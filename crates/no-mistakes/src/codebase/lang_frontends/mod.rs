@@ -48,6 +48,7 @@ pub(crate) use php::collect_php_facts;
 pub(crate) use python::collect_python_facts;
 pub(crate) use ruby::collect_ruby_facts;
 pub(crate) use rustlang::collect_rust_facts;
+pub(crate) use strip::{mask_strings, strip_comments_keep_strings};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub(crate) struct LangFrontendConfig {

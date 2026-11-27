@@ -443,6 +443,7 @@ require("./postgres-wrapper-end-alias-api.test.js");
 require("./postgres-var-scope-api.test.js");
 
 require("./query-reached-per-item-api.test.js");
+require("./query-reached-per-item-languages-api.test.js");
 require("./mutable-receiver-api.test.js");
 require("./assignment-receiver-api.test.js");
 

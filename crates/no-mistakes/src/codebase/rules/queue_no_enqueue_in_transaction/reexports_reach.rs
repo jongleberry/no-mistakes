@@ -5,7 +5,7 @@ use crate::codebase::dependencies::extract::{
 };
 use crate::codebase::dependencies::graph::{ImportTarget, TsFactLookup};
 use crate::codebase::ts_source::facts::TsFileFacts;
-use crate::fx::FxHashSet;
+use crate::fx::{FxHashMap, FxHashSet};
 use std::path::{Path, PathBuf};
 
 pub(in super::super) fn binding_reaches_module(
@@ -26,7 +26,22 @@ pub(in super::super) fn reaches_module(
     export: Option<&str>,
     modules: &FxHashSet<&str>,
 ) -> bool {
-    walk(ctx, from, specifier, export, modules, &mut FxHashSet::default())
+    walk(
+        ctx,
+        from,
+        specifier,
+        export,
+        modules,
+        &mut ReachState {
+            stack: FxHashSet::default(),
+            memo: FxHashMap::default(),
+        },
+    )
+}
+
+struct ReachState {
+    stack: FxHashSet<(PathBuf, Option<String>)>,
+    memo: FxHashMap<(PathBuf, Option<String>), bool>,
 }
 
 fn walk(
@@ -35,7 +50,7 @@ fn walk(
     spec: &str,
     export: Option<&str>,
     modules: &FxHashSet<&str>,
-    visited: &mut FxHashSet<(PathBuf, Option<String>)>,
+    state: &mut ReachState,
 ) -> bool {
     if modules.contains(spec) {
         return true;
@@ -46,11 +61,15 @@ fn walk(
         return spec.starts_with(['.', '/']);
     };
     let key = (target.clone(), export.map(str::to_owned));
-    if !visited.insert(key.clone()) {
+    if let Some(done) = state.memo.get(&key) {
+        return *done;
+    }
+    if !state.stack.insert(key.clone()) {
         return true;
     }
-    let reached = walk_target(ctx, target, export, modules, visited);
-    visited.remove(&key);
+    let reached = walk_target(ctx, target, export, modules, state);
+    state.stack.remove(&key);
+    state.memo.insert(key, reached);
     reached
 }
 
@@ -59,7 +78,7 @@ fn walk_target(
     target: &Path,
     export: Option<&str>,
     modules: &FxHashSet<&str>,
-    visited: &mut FxHashSet<(PathBuf, Option<String>)>,
+    state: &mut ReachState,
 ) -> bool {
     let Some(tf) = ctx
         .facts
@@ -76,7 +95,7 @@ fn walk_target(
         let mut matched = false;
         for eb in exports.filter(|eb| eb.exported == name) {
             matched = true;
-            if export_binding_reaches(ctx, target, tf, eb, modules, visited) {
+            if export_binding_reaches(ctx, target, tf, eb, modules, state) {
                 return true;
             }
         }
@@ -84,12 +103,12 @@ fn walk_target(
             && tf
                 .star_reexport_specifiers
                 .iter()
-                .any(|s| walk(ctx, target, s, Some(name), modules, visited));
+                .any(|s| walk(ctx, target, s, Some(name), modules, state));
     }
     tf.star_reexport_specifiers
         .iter()
-        .any(|s| walk(ctx, target, s, None, modules, visited))
-        || exports.any(|eb| export_binding_reaches(ctx, target, tf, eb, modules, visited))
+        .any(|s| walk(ctx, target, s, None, modules, state))
+        || exports.any(|eb| export_binding_reaches(ctx, target, tf, eb, modules, state))
 }
 
 fn export_binding_reaches(
@@ -98,11 +117,11 @@ fn export_binding_reaches(
     tf: &TsFileFacts,
     eb: &ExportedBinding,
     modules: &FxHashSet<&str>,
-    visited: &mut FxHashSet<(PathBuf, Option<String>)>,
+    state: &mut ReachState,
 ) -> bool {
     if let Some(next_spec) = &eb.specifier {
         let next_export = (eb.local != "*").then_some(eb.local.as_str());
-        return walk(ctx, target, next_spec, next_export, modules, visited);
+        return walk(ctx, target, next_spec, next_export, modules, state);
     }
     if let Some(imp) = tf
         .imported_bindings
@@ -112,7 +131,7 @@ fn export_binding_reaches(
     {
         let next_export =
             (imp.kind != ImportedBindingKind::Namespace).then_some(imp.imported.as_str());
-        return walk(ctx, target, &imp.specifier, next_export, modules, visited);
+        return walk(ctx, target, &imp.specifier, next_export, modules, state);
     }
     !matches!(
         local::classify_local_export(

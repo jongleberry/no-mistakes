@@ -79,6 +79,50 @@ fn async_hooks_storage_import_is_built_in() {
 }
 
 #[test]
+fn annotated_instance_fields_prove_this_receivers() {
+    let source = concat!(
+        "class Runner {\n",
+        "  items: string[] = []\n",
+        "  text: string = ''\n",
+        "  pending: Promise<string>\n",
+        "  queue: { push(job: string): void } = { push(_job: string) {} }\n",
+        "  loose = []\n",
+        "  dyn: string\n",
+        "  static hidden: string[] = []\n",
+        "  read = () => this.items.map((item: string) => item)\n",
+        "  run() {\n",
+        "    this.items.map((item: string) => item)\n",
+        "    this.text.replace('a', 'b')\n",
+        "    this.dyn.trim()\n",
+        "    this.pending.then(() => 1)\n",
+        "    this.queue.push('job')\n",
+        "    this.loose.push(1)\n",
+        "    this.hidden.push(1)\n",
+        "    function nested() { this.items.map((item: string) => item) }\n",
+        "  }\n",
+        "  wrapped() {\n",
+        "    return withTx(async (query: string) => {\n",
+        "      this.items.map((item: string) => item)\n",
+        "    })\n",
+        "  }\n",
+        "  static stat() { this.items.map((item: string) => item) }\n",
+        "}\n",
+        "class Child { run() { this.items.map((item: string) => item) } }",
+    );
+    let found = proven(source);
+    assert_eq!(
+        found,
+        [
+            "this.items.map",
+            "this.items.map",
+            "this.text.replace",
+            "this.dyn.trim",
+            "this.items.map"
+        ]
+    );
+}
+
+#[test]
 fn deeply_chained_initializers_stop_at_the_depth_bound() {
     let mut source = String::from("const v0 = [];\n");
     for n in 1..12 {

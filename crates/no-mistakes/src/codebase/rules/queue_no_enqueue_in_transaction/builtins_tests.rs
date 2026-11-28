@@ -50,6 +50,29 @@ fn builtin_classifiers_cover_globals_prototypes_and_non_builtins() {
     );
     assert!(is_builtin_global_fn(&named_fn, &imports));
     assert!(is_builtin_global_fn(&member_fn, &imports));
+    let callback_member = |object: &str, method: &str| {
+        ValueExpression::Member(
+            std::sync::Arc::new(ValueExpression::Named {
+                name: object.into(),
+                scope: None,
+                offset: 0,
+                context: None,
+            }),
+            method.into(),
+        )
+    };
+    assert!(!is_builtin_global_fn(
+        &callback_member("Promise", "try"),
+        &imports
+    ));
+    assert!(!is_builtin_global_fn(
+        &callback_member("Array", "from"),
+        &imports
+    ));
+    assert!(!is_builtin_global_fn(
+        &callback_member("JSON", "parse"),
+        &imports
+    ));
     assert!(!is_builtin_global_fn(&ValueExpression::Unknown, &imports));
     imports.insert("Boolean", &shadowed);
     assert!(!is_builtin_global_fn(&named_fn, &imports));

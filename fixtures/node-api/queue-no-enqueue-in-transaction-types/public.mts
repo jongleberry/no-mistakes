@@ -18,3 +18,9 @@ export const options: QueueNoEnqueueInTransactionOptions = {
   transactions: [transaction],
   publishers: [publisher],
 };
+
+export const advised: QueueNoEnqueueInTransactionOptions = {
+  transactions: [transaction],
+  publishers: [publisher],
+  unanalyzable: "advise",
+};

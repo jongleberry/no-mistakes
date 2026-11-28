@@ -125,12 +125,16 @@ pub(super) fn is_builtin_global_fn(
         ValueExpression::Named {
             name, scope: None, ..
         } => !imports.contains_key(name.as_str()) && GLOBAL_FUNCTIONS.contains(&name.as_str()),
-        ValueExpression::Member(receiver, _) => matches!(
-            receiver.as_ref(),
-            ValueExpression::Named { name, scope: None, .. }
-                if !imports.contains_key(name.as_str())
-                    && GLOBAL_STATIC_OBJECTS.contains(&name.as_str())
-        ),
+        ValueExpression::Member(receiver, method) => match receiver.as_ref() {
+            ValueExpression::Named {
+                name, scope: None, ..
+            } if !imports.contains_key(name.as_str())
+                && GLOBAL_STATIC_OBJECTS.contains(&name.as_str()) =>
+            {
+                global_static_call(name, method).is_some_and(|call| call.callbacks.is_empty())
+            }
+            _ => false,
+        },
         _ => false,
     }
 }

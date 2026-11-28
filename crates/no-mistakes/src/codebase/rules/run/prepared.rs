@@ -74,6 +74,7 @@ fn graph_plan_with_forbidden(
     if config.rule_configured(queue_no_enqueue_in_transaction::RULE_ID) {
         plan.calls = true;
         plan.imports = true;
+        plan.builtin_receivers = true;
         needed = true;
     }
     if config.rule_configured(super::super::coverage_producer_assertion_owner::RULE_ID) {

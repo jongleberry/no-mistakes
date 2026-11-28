@@ -33,8 +33,12 @@ the outer handle reports the captured call as unanalyzable: the exemption
 belongs only to the transaction whose parameter the call uses. Built-in static methods (`Math.*`, `JSON.*`, `Number.*`,
 `String.*`, `Object.*`, `Array.*`, `Promise.*`, and similar global built-in
 objects when not shadowed) and standard `Array`, `String`, `Map`, `Set`, `Promise`, `Number`,
-`Date`, and `RegExp` prototype methods on locals are known not to publish;
-callbacks passed to built-in methods such as `rows.map(...)`, `flatMap(...)`,
+`Date`, and `RegExp` prototype methods on locals are known not to publish.
+A method on `this.field` is in that set only when the field's annotation is one
+of those built-in values; an untyped or structural `this.queue.push` is
+unanalyzable. Passing a leaf built-in such as `Math.abs` as a callback is
+clean, and passing a callback-invoking built-in such as `Promise.try` is
+unanalyzable. Callbacks passed to built-in methods such as `rows.map(...)`, `flatMap(...)`,
 `filter(...)`, `reduce(...)`, `forEach(...)`, `Array.from(...)`, and `.then(...)`
 are analyzed in the same transaction scope so an enqueue inside them is still
 flagged. An optional callback argument (`JSON.stringify` replacer, or the
@@ -71,6 +75,7 @@ repository-relative paths.
 | --- | --- |
 | `transactions` | Transaction APIs, declared as `{ module, export, callbackArgument }`. The callback argument index is zero-based and has no default. Each listed API must call the callback before commit. |
 | `publishers` | Independently durable queue APIs, declared as `{ module, export }`. Leave transaction-bound outbox writers outside this list. |
+| `unanalyzable` | `report` (default), `advise`, or `ignore` for shapes the rule cannot prove. |
 
 ```yaml
 rules:

@@ -442,6 +442,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "target": "unanalyzable"
         },
         {
+          "file": "src/callback-builtins.ts",
+          "import": "Array.from",
+          "line": 6,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "const viaTry = Array.from([enqueue], Promise.try, Promise)",
+          "target": "unanalyzable"
+        },
+        {
           "file": "src/cycle-use.ts",
           "import": "enqueue",
           "line": 8,
@@ -512,6 +521,24 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "queue.push(job)",
           "target": "unanalyzable"
+        },
+        {
+          "file": "src/this-queue.ts",
+          "import": "enqueue",
+          "line": 12,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "await enqueue({ id: '1' })",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/this-queue.ts",
+          "import": "this.queue.push",
+          "line": 10,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "this.queue.push('job')",
+          "target": "unanalyzable"
         }
       ],
       "suppressed": [],
@@ -547,15 +574,6 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "(null as unknown as { add(): void }).add();",
-          "target": "unanalyzable"
-        },
-        {
-          "file": "src/flows/builtin-unanalyzable.ts",
-          "import": "<unknown>.trim",
-          "line": 45,
-          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
-          "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "`${starQueue.id}`.trim();",
           "target": "unanalyzable"
         },
         {
@@ -1146,15 +1164,6 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "(null as unknown as { add(): void }).add();",
-          "target": "unanalyzable"
-        },
-        {
-          "file": "src/flows/builtin-unanalyzable.ts",
-          "import": "<unknown>.trim",
-          "line": 45,
-          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
-          "rule": "queue-no-enqueue-in-transaction",
-          "sourceLine": "`${starQueue.id}`.trim();",
           "target": "unanalyzable"
         },
         {

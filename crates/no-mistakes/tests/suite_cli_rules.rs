@@ -407,6 +407,9 @@ mod cli_check_queue_shared_rate_limit;
 #[path = "cli_check_rules_no_single_enqueue_in_loop.rs"]
 mod cli_check_rules_no_single_enqueue_in_loop;
 
+#[path = "cli_check_rules_queue_no_enqueue_in_transaction.rs"]
+mod cli_check_rules_queue_no_enqueue_in_transaction;
+
 #[path = "cli_suppression_index.rs"]
 mod cli_suppression_index;
 

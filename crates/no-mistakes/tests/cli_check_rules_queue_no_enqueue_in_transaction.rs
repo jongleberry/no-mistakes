@@ -11,6 +11,7 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
     let incomplete = rules_path(RULE, "fixture", "incomplete");
     let unanalyzable = rules_path(RULE, "fixture", "unanalyzable");
     let directive_audit = rules_path(RULE, "fixture", "directive-audit");
+    let review_gaps = rules_path(RULE, "fixture", "review-gaps");
     let reports = assert_saved_fixture_report(
         "queue_no_enqueue_in_transaction",
         &[
@@ -55,6 +56,11 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
                 "directive_audit",
                 directive_audit.clone(),
                 directive_audit.join(".no-mistakes.yml"),
+            ),
+            (
+                "review_gaps",
+                review_gaps.clone(),
+                review_gaps.join(".no-mistakes.yml"),
             ),
         ],
         &[],
@@ -246,4 +252,35 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
         .as_str()
         .unwrap()
         .contains("disabled or out-of-scope rule `queue-no-enqueue-in-transaction`"));
+
+    let gaps = &reports["review_gaps"];
+    assert_eq!(gaps["exitCode"], 1);
+    let mut gap_rows: Vec<_> = gaps["report"]["rules"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|finding| {
+            assert_eq!(finding["rule"], RULE);
+            (
+                finding["file"].as_str().unwrap(),
+                finding["line"].as_u64().unwrap(),
+                finding["target"].as_str().unwrap(),
+            )
+        })
+        .collect();
+    gap_rows.sort_unstable();
+    assert_eq!(
+        gap_rows,
+        [
+            ("src/alternatives.ts", 8, "unanalyzable"),
+            ("src/cycle-use.ts", 7, "unanalyzable"),
+            ("src/cycle-use.ts", 7, "unanalyzable"),
+            ("src/cycle-use.ts", 8, "@sample/jobs#enqueue"),
+            ("src/json-parse.ts", 7, "@sample/jobs#enqueue"),
+            ("src/nested-handle.ts", 6, "@sample/jobs#enqueue"),
+            ("src/reassigned.ts", 8, "unanalyzable"),
+            ("src/self-ref.ts", 9, "@sample/jobs#enqueue"),
+            ("src/structural-param.ts", 5, "unanalyzable"),
+        ]
+    );
 }

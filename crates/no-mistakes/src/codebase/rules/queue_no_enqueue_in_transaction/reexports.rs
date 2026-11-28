@@ -59,7 +59,8 @@ fn walk(
             ResolvedApi::Other
         };
     };
-    if !visited.insert((target.clone(), export.to_owned())) {
+    let head = export.split_once('.').map_or(export, |(head, _)| head);
+    if !visited.insert((target.clone(), head.to_owned())) {
         return ResolvedApi::Unanalyzable;
     }
     let Some(tf) = ctx

@@ -11,6 +11,10 @@ use std::path::Path;
 
 #[path = "receivers_local.rs"]
 mod local;
+#[path = "receivers_sets.rs"]
+mod sets;
+
+pub(super) use sets::{invalidated_locals, structural_params};
 
 pub(super) struct FileEnv<'a> {
     pub(super) ctx: &'a Context<'a>,
@@ -26,6 +30,8 @@ pub(super) struct FileEnv<'a> {
     pub(super) local_bindings: FxHashMap<(usize, &'a str), &'a ValueExpression>,
     pub(super) iteration_bindings: FxHashMap<(usize, &'a str), &'a ValueExpression>,
     pub(super) local_callables: FxHashMap<(usize, &'a str), CallableId>,
+    pub(super) structural_params: FxHashSet<(usize, &'a str)>,
+    pub(super) invalidated_locals: FxHashSet<(usize, &'a str)>,
 }
 
 impl FileEnv<'_> {
@@ -46,7 +52,19 @@ pub(super) fn is_callback_param_handle(
     tx_owner: CallableId,
     params: &FxHashSet<(CallableId, usize, &str)>,
 ) -> bool {
-    call.is_some_and(|c| is_param_expr(&c.callee, tx_owner, params))
+    let Some(call) = call else {
+        return false;
+    };
+    let receiver = match &call.callee {
+        ValueExpression::Named { .. } => &call.callee,
+        ValueExpression::Member(inner, _) => inner.as_ref(),
+        _ => return false,
+    };
+    matches!(
+        receiver,
+        ValueExpression::Named { name, scope: Some(scope), .. }
+            if params.contains(&(tx_owner, *scope, name.as_str()))
+    )
 }
 
 pub(super) fn is_param_expr(
@@ -69,6 +87,7 @@ pub(super) fn classify_builtin_site(
     site: &ResolvedCallSite,
     call: &ValueCall,
     tx_owner: CallableId,
+    depth: u8,
 ) -> Option<BuiltinCall> {
     let ValueExpression::Member(receiver, method) = &call.callee else {
         return None;
@@ -90,12 +109,22 @@ pub(super) fn classify_builtin_site(
             return builtins::global_static_call(name, method);
         }
     }
+    if let ValueExpression::Named {
+        name,
+        scope: Some(scope),
+        ..
+    } = receiver.as_ref()
+    {
+        if env.structural_params.contains(&(*scope, name.as_str())) {
+            return None;
+        }
+    }
     let builtin = builtins::proto_method_call(method)?;
     if returned_or_typed_from_publisher(env, site) {
         return None;
     }
     let this_chain = site.source_callee.starts_with("this.");
-    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, 0)
+    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth)
         .then_some(builtin)
 }
 
@@ -155,7 +184,9 @@ fn is_local_or_builtin_receiver(
             })
         }
         ValueExpression::Derived(parts) => !parts.iter().any(|p| expr_is_import(p, &env.imports)),
-        ValueExpression::Call(start, end) => local::inner_call_is_clean(env, *start, *end, tx_owner),
+        ValueExpression::Call(start, end) => {
+            local::inner_call_is_clean(env, *start, *end, tx_owner, depth)
+        }
         ValueExpression::Unknown => env.builtin_construct_offsets.contains(&call_offset),
         _ => false,
     }

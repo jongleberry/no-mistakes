@@ -127,6 +127,12 @@ impl CallbackWalk<'_> {
             return;
         }
         if let ValueExpression::Named { name, scope: Some(scope), .. } = arg {
+            if env.invalidated_locals.contains(&(*scope, name.as_str())) {
+                if !optional_non_callable {
+                    self.emit_unprovable(env, site);
+                }
+                return;
+            }
             if let Some(cb) = env.local_callable(*scope, name) {
                 self.inspect_arg(env, site, &ValueExpression::Callable(cb), optional_non_callable, tx_owner, depth + 1);
                 return;

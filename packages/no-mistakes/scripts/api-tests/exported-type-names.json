@@ -430,6 +430,7 @@
   "QueueJobStateAsRecordConfig",
   "QueueJobStateAsRecordOptions",
   "QueueNameFactoryOptions",
+  "QueueNoEnqueueInTransactionBegin",
   "QueueNoEnqueueInTransactionBoundary",
   "QueueNoEnqueueInTransactionOptions",
   "QueueNoEnqueueInTransactionPublisher",

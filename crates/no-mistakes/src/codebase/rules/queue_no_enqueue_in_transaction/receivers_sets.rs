@@ -41,3 +41,13 @@ pub(in super::super) fn invalidated_locals<'a>(
     }
     names
 }
+
+pub(in super::super) fn written_members(
+    flow: &ValueFlowFacts,
+) -> FxHashSet<(usize, &str, Option<&str>)> {
+    flow.identifier_writes
+        .iter()
+        .filter(|write| write.members.len() == 1)
+        .map(|write| (write.scope, write.name.as_str(), write.members[0].as_deref()))
+        .collect()
+}

@@ -1,8 +1,9 @@
+//! Rule-local re-export and reachability resolution (unification with graph export resolution tracked in #4791).
 use super::analyze::Context;
 use crate::codebase::dependencies::extract::{ImportedBinding, ImportedBindingKind};
 use crate::codebase::dependencies::graph::{ImportTarget, TsFactLookup};
 use crate::codebase::ts_source::facts::TsFileFacts;
-use crate::fx::FxHashSet;
+use crate::fx::FxHashMap;
 use std::path::{Path, PathBuf};
 
 #[path = "reexports_local.rs"]
@@ -36,7 +37,7 @@ pub(super) fn follow_export(
     export: &str,
     is_target: &impl Fn(&str, &str) -> bool,
 ) -> ResolvedApi {
-    walk(ctx, from, specifier, export, is_target, &mut FxHashSet::default())
+    walk(ctx, from, specifier, export, is_target, &mut FxHashMap::default())
 }
 
 fn walk(
@@ -45,7 +46,7 @@ fn walk(
     specifier: &str,
     export: &str,
     is_target: &impl Fn(&str, &str) -> bool,
-    visited: &mut FxHashSet<(PathBuf, String)>,
+    visited: &mut FxHashMap<(PathBuf, String), usize>,
 ) -> ResolvedApi {
     if is_target(specifier, export) {
         return ResolvedApi::Target(specifier.to_owned(), export.to_owned());
@@ -60,9 +61,11 @@ fn walk(
         };
     };
     let head = export.split_once('.').map_or(export, |(head, _)| head);
-    if !visited.insert((target.clone(), head.to_owned())) {
+    let key = (target.clone(), head.to_owned());
+    if visited.get(&key).is_some_and(|&prev| export.len() >= prev) {
         return ResolvedApi::Unanalyzable;
     }
+    visited.insert(key, export.len());
     let Some(tf) = ctx
         .facts
         .get_ts_facts(target)

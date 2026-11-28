@@ -143,20 +143,25 @@ impl<'a> Visit<'a> for Calls<'_> {
         let Some(value) = &property.value else {
             return;
         };
-        let pushed = if property.r#static {
-            false
-        } else if let Some(frame) = self.classes.last_mut() {
-            frame.allowed.push(self.this_depth);
-            true
-        } else {
-            false
-        };
-        self.visit_expression(value);
-        if pushed {
-            if let Some(frame) = self.classes.last_mut() {
-                frame.allowed.pop();
-            }
+        if property.r#static {
+            self.this_depth = self.this_depth.saturating_add(1);
+            self.visit_expression(value);
+            self.this_depth -= 1;
+            return;
         }
+        if let Some(frame) = self.classes.last_mut() {
+            frame.allowed.push(self.this_depth);
+        }
+        self.visit_expression(value);
+        if let Some(frame) = self.classes.last_mut() {
+            frame.allowed.pop();
+        }
+    }
+
+    fn visit_static_block(&mut self, block: &StaticBlock<'a>) {
+        self.this_depth = self.this_depth.saturating_add(1);
+        walk::walk_static_block(self, block);
+        self.this_depth -= 1;
     }
 
     fn visit_function(&mut self, function: &Function<'a>, flags: ScopeFlags) {

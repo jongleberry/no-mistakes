@@ -141,7 +141,7 @@ fn export_binding_reaches(
             &eb.local,
             None,
             &|spec, _| modules.contains(spec),
-            &mut FxHashSet::default(),
+            &mut FxHashMap::default(),
         ),
         ResolvedApi::Other
     )

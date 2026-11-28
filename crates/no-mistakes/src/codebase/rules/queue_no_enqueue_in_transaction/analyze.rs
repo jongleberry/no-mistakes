@@ -2,7 +2,8 @@ use super::builtins;
 use super::callbacks::CallbackWalk;
 use super::options::{Api, Targets};
 use super::receivers::{
-    classify_builtin_site, invalidated_locals, is_callback_param_handle, structural_params, FileEnv,
+    classify_builtin_site, invalidated_locals, is_callback_param_handle, structural_params,
+    written_members, FileEnv,
 };
 use super::reexports::{self, ResolvedApi};
 use super::transactions::collect_tx_callbacks;
@@ -89,6 +90,7 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
             .map(|(scope, name, id)| ((*scope, name.as_str()), *id)).collect(),
         structural_params: structural_params(&flow.parameters),
         invalidated_locals: invalidated_locals(flow, &file_facts.callable_binding_declared_at),
+        written_members: written_members(flow),
     };
     let mut walk = CallbackWalk {
         visited: tx_callbacks.iter().copied().map(|cb| (cb, cb)).collect(),

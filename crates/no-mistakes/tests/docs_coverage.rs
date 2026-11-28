@@ -362,6 +362,7 @@ fn test_file_hygiene_eslint_rules_have_public_docs_and_options() {
     let catalog = read(&root.join("docs/eslint-rules/README.md"));
     let plugin_docs = read(&root.join("docs/eslint-plugin.md"));
     for rule in [
+        "test-no-config-mirror-assertion",
         "test-no-fixed-temp-paths",
         "test-no-typed-enqueue-fake",
         "test-no-wall-time-assertions",
@@ -379,6 +380,8 @@ fn test_file_hygiene_eslint_rules_have_public_docs_and_options() {
         }
     }
     let types = read(&root.join("packages/eslint-plugin-no-mistakes/src/index.d.ts"));
+    assert!(types.contains("export interface TestNoConfigMirrorAssertionOptions"));
+    assert!(types.contains("export interface TestNoConfigMirrorParser"));
     assert!(types.contains("export interface TestNoWallTimeAssertionsOptions"));
     assert!(types.contains("allowedPaths?: string[]"));
 }

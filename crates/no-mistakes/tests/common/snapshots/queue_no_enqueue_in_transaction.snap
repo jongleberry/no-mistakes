@@ -423,6 +423,101 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
       "warnings": []
     }
   },
+  "review_gaps": {
+    "exitCode": 1,
+    "report": {
+      "advisories": [],
+      "codebase": [],
+      "integration": [],
+      "queues": [],
+      "react": [],
+      "rules": [
+        {
+          "file": "src/alternatives.ts",
+          "import": "<unknown>",
+          "line": 8,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return (flag ? Array.from : Array.of)(rows, (row: { id: string }) => enqueue({ id: row.id }))",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/cycle-use.ts",
+          "import": "enqueue",
+          "line": 8,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return enqueue({ id: '2' })",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/cycle-use.ts",
+          "import": "jobs.enqueue",
+          "line": 7,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "jobs.enqueue({ id: '1' })",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/cycle-use.ts",
+          "import": "jobs.enqueue",
+          "line": 7,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "jobs.enqueue({ id: '1' })",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/json-parse.ts",
+          "import": "enqueue",
+          "line": 7,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "const revived = JSON.parse(payload, () => enqueue({ id: '1' }))",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/nested-handle.ts",
+          "import": "enqueue",
+          "line": 6,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return query.items.map(() => enqueue({ id: '1' }))",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/reassigned.ts",
+          "import": "rows.map",
+          "line": 8,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return rows.map(work)",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/self-ref.ts",
+          "import": "enqueue",
+          "line": 9,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return items.map(() => enqueue({ id: '1' }))",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/structural-param.ts",
+          "import": "queue.push",
+          "line": 5,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "queue.push(job)",
+          "target": "unanalyzable"
+        }
+      ],
+      "suppressed": [],
+      "warnings": []
+    }
+  },
   "unanalyzable_advise": {
     "exitCode": 0,
     "report": {

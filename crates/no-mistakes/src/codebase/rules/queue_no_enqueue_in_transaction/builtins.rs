@@ -61,12 +61,15 @@ pub(super) fn global_static_call(object: &str, method: &str) -> Option<BuiltinCa
         return None;
     }
     Some(match (object, method) {
-        ("Array", "from" | "fromAsync")
-        | ("Object", "groupBy")
-        | ("Map", "groupBy")
-        | ("JSON", "parse") => BuiltinCall {
+        ("Array", "from" | "fromAsync") | ("Object", "groupBy") | ("Map", "groupBy") => {
+            BuiltinCall {
+                callbacks: &[1],
+                optional_non_callable: false,
+            }
+        }
+        ("JSON", "parse") => BuiltinCall {
             callbacks: &[1],
-            optional_non_callable: false,
+            optional_non_callable: true,
         },
         ("JSON", "stringify") => BuiltinCall {
             callbacks: &[1],

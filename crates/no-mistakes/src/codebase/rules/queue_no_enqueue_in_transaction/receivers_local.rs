@@ -22,7 +22,14 @@ pub(super) fn is_clean_scoped_local(
         return true;
     }
     if let Some(iter) = env.iteration_bindings.get(&(scope, name)) {
-        return is_local_or_builtin_receiver(env, iter, call_offset, false, tx_owner, depth + 1);
+        return is_local_or_builtin_receiver(
+            env,
+            iter,
+            call_offset,
+            false,
+            tx_owner,
+            depth.saturating_add(1),
+        );
     }
     if let Some(ctor) = env
         .file_facts
@@ -36,7 +43,14 @@ pub(super) fn is_clean_scoped_local(
         return false;
     };
     !matches!(bound, ValueExpression::Unknown)
-        && is_local_or_builtin_receiver(env, bound, call_offset, false, tx_owner, depth + 1)
+        && is_local_or_builtin_receiver(
+            env,
+            bound,
+            call_offset,
+            false,
+            tx_owner,
+            depth.saturating_add(1),
+        )
 }
 
 pub(super) fn inner_call_is_clean(
@@ -44,6 +58,7 @@ pub(super) fn inner_call_is_clean(
     start: u32,
     end: u32,
     tx_owner: CallableId,
+    depth: u8,
 ) -> bool {
     env.calls_by_span
         .get(&(start, end))
@@ -82,7 +97,8 @@ pub(super) fn inner_call_is_clean(
                                         })
                                     }
                                     ResolvedCallTarget::Unknown => {
-                                        classify_builtin_site(env, site, inner, tx_owner).is_some()
+                                        classify_builtin_site(env, site, inner, tx_owner, depth)
+                                            .is_some()
                                     }
                                     ResolvedCallTarget::Alternatives(_) => false,
                                 }

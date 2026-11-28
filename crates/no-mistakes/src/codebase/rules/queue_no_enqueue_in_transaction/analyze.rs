@@ -1,7 +1,9 @@
 use super::builtins;
 use super::callbacks::CallbackWalk;
 use super::options::{Api, Targets};
-use super::receivers::{classify_builtin_site, is_callback_param_handle, FileEnv};
+use super::receivers::{
+    classify_builtin_site, invalidated_locals, is_callback_param_handle, structural_params, FileEnv,
+};
 use super::reexports::{self, ResolvedApi};
 use super::transactions::collect_tx_callbacks;
 use crate::codebase::check_facts::CheckFactMap;
@@ -85,6 +87,8 @@ pub(super) fn check_file(ctx: &Context<'_>, file: &Path, diagnostics: &mut Analy
             .map(|b| ((b.scope, b.name.as_str()), &b.value)).collect(),
         local_callables: file_facts.callable_bindings.iter()
             .map(|(scope, name, id)| ((*scope, name.as_str()), *id)).collect(),
+        structural_params: structural_params(&flow.parameters),
+        invalidated_locals: invalidated_locals(flow, &file_facts.callable_binding_declared_at),
     };
     let mut walk = CallbackWalk {
         visited: tx_callbacks.iter().copied().map(|cb| (cb, cb)).collect(),
@@ -141,7 +145,7 @@ fn check_callback_site(
                 }),
                 ResolvedApi::Target(..) | ResolvedApi::Unanalyzable
             )
-        }) || site.has_unknown_target())
+        }) || site.has_unknown_target() || any_global_callback(site))
     {
         walk.report_unanalyzable(env, site,
             "ambiguous call target inside transaction callback may invoke a configured publisher; call a single known target or move publishes after commit");
@@ -153,7 +157,7 @@ fn check_callback_site(
         && !is_callback_param_handle(call, tx_owner, &env.callback_params)
     {
         if let Some((call, builtin)) = call.and_then(|c| {
-            classify_builtin_site(env, site, c, tx_owner).map(|builtin| (c, builtin))
+            classify_builtin_site(env, site, c, tx_owner, 0).map(|builtin| (c, builtin))
         }) {
             walk.inspect_builtin(env, site, call, builtin, tx_owner);
         } else {
@@ -183,3 +187,12 @@ pub(super) fn any_candidate_matches(site: &ResolvedCallSite, predicate: impl Fn(
 }
 
 pub(super) fn site_key(site: &ResolvedCallSite) -> CallKey<'_> { (site.offset, site.source_callee.as_str()) }
+
+fn any_global_callback(site: &ResolvedCallSite) -> bool {
+    site.targets().any(|candidate| {
+        matches!(
+            candidate.target,
+            KnownCallTargetRef::Global { name } if builtins::global_target_callbacks(name).is_some()
+        )
+    }) || site.alternatives.iter().any(any_global_callback)
+}

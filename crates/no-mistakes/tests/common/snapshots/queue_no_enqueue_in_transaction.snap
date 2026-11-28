@@ -451,6 +451,33 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "target": "unanalyzable"
         },
         {
+          "file": "src/coverage-paths.ts",
+          "import": "<unknown>",
+          "line": 23,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(flag ? getTextA : getTextB)().trim()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "<unknown>",
+          "line": 24,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "fnFactory()()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "d6.push",
+          "line": 22,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "d6.push(1)",
+          "target": "unanalyzable"
+        },
+        {
           "file": "src/cycle-use.ts",
           "import": "enqueue",
           "line": 8,
@@ -478,6 +505,24 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "target": "unanalyzable"
         },
         {
+          "file": "src/fn-member.ts",
+          "import": "Array.from",
+          "line": 6,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "Array.from(jobs, helpers.send)",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/fn-member.ts",
+          "import": "Array.from",
+          "line": 7,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "Array.from(jobs, arrowHelper.send)",
+          "target": "unanalyzable"
+        },
+        {
           "file": "src/json-parse.ts",
           "import": "enqueue",
           "line": 7,
@@ -485,6 +530,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "const revived = JSON.parse(payload, () => enqueue({ id: '1' }))",
           "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/member-write.ts",
+          "import": "values.set",
+          "line": 11,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "values.set('job', job)",
+          "target": "unanalyzable"
         },
         {
           "file": "src/nested-handle.ts",
@@ -496,6 +550,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "target": "@sample/jobs#enqueue"
         },
         {
+          "file": "src/nested-static.ts",
+          "import": "this.items.map",
+          "line": 11,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "static result = this.items.map(job)",
+          "target": "unanalyzable"
+        },
+        {
           "file": "src/reassigned.ts",
           "import": "rows.map",
           "line": 8,
@@ -503,6 +566,15 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "return rows.map(work)",
           "target": "unanalyzable"
+        },
+        {
+          "file": "src/self-ns-use.ts",
+          "import": "Array.from",
+          "line": 6,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "Array.from([{ id: '1' }], jobs.nested.nested.enqueue)",
+          "target": "@sample/jobs#enqueue"
         },
         {
           "file": "src/self-ref.ts",

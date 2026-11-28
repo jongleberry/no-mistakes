@@ -9,12 +9,14 @@ pub(super) fn is_clean_scoped_local(
     env: &FileEnv<'_>,
     scope: usize,
     name: &str,
+    method: &str,
     call_offset: u32,
     tx_owner: CallableId,
     depth: u8,
 ) -> bool {
     if env.publisher_typed_params.contains(&(scope, name))
         || (scope == 0 && env.imports.contains_key(name))
+        || env.has_member_write(scope, name, method)
     {
         return false;
     }
@@ -25,6 +27,7 @@ pub(super) fn is_clean_scoped_local(
         return is_local_or_builtin_receiver(
             env,
             iter,
+            method,
             call_offset,
             tx_owner,
             depth.saturating_add(1),
@@ -45,6 +48,7 @@ pub(super) fn is_clean_scoped_local(
         && is_local_or_builtin_receiver(
             env,
             bound,
+            method,
             call_offset,
             tx_owner,
             depth.saturating_add(1),

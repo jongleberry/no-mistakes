@@ -425,7 +425,7 @@ Enable `queue-no-enqueue-in-transaction` in `check` to report independently
 durable publishes in inline callbacks that run before commit. Declare the
 transaction and publisher module exports and the zero-based `callbackArgument`
 for each transaction. See
-[the rule](https://github.com/jonathanong/no-mistakes/blob/main/docs/rules/queue-no-enqueue-in-transaction.md).
+[the rule](https://github.com/jongleberry/no-mistakes/blob/main/docs/rules/queue-no-enqueue-in-transaction.md).
 
 For `vite-optimize-deps-nested-imports`, set required `configFiles` and `packages`.
 Optional `includeSources` reads a static `parent > child` array from a named export,

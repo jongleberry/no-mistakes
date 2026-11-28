@@ -273,6 +273,7 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
         gap_rows,
         [
             ("src/alternatives.ts", 8, "unanalyzable"),
+            ("src/callback-builtins.ts", 6, "unanalyzable"),
             ("src/cycle-use.ts", 7, "unanalyzable"),
             ("src/cycle-use.ts", 7, "unanalyzable"),
             ("src/cycle-use.ts", 8, "@sample/jobs#enqueue"),
@@ -281,6 +282,8 @@ fn queue_no_enqueue_in_transaction_json_matches_snapshot() {
             ("src/reassigned.ts", 8, "unanalyzable"),
             ("src/self-ref.ts", 9, "@sample/jobs#enqueue"),
             ("src/structural-param.ts", 5, "unanalyzable"),
+            ("src/this-queue.ts", 10, "unanalyzable"),
+            ("src/this-queue.ts", 12, "@sample/jobs#enqueue"),
         ]
     );
 }

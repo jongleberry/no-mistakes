@@ -26,7 +26,6 @@ pub(super) fn is_clean_scoped_local(
             env,
             iter,
             call_offset,
-            false,
             tx_owner,
             depth.saturating_add(1),
         );
@@ -47,7 +46,6 @@ pub(super) fn is_clean_scoped_local(
             env,
             bound,
             call_offset,
-            false,
             tx_owner,
             depth.saturating_add(1),
         )

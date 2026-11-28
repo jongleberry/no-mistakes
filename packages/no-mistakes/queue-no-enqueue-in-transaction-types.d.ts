@@ -1,3 +1,5 @@
+import type { Unanalyzable } from "./traversal-types";
+
 export interface QueueNoEnqueueInTransactionPublisher {
   module: string;
   export: string;
@@ -14,4 +16,6 @@ export interface QueueNoEnqueueInTransactionBoundary {
 export interface QueueNoEnqueueInTransactionOptions {
   transactions: QueueNoEnqueueInTransactionBoundary[];
   publishers: QueueNoEnqueueInTransactionPublisher[];
+  /** Policy for shapes the rule cannot prove (default: "report"). */
+  unanalyzable?: Unanalyzable;
 }

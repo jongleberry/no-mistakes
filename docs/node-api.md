@@ -110,7 +110,8 @@ Configured [`queue-no-enqueue-in-transaction`](rules/queue-no-enqueue-in-transac
 runs through asynchronous `check({ root, config })` and `analyzeProject()` check
 reports using the same `RuleFinding` as CLI `check`.
 `QueueNoEnqueueInTransactionOptions`, `QueueNoEnqueueInTransactionBoundary`, and
-`QueueNoEnqueueInTransactionPublisher` describe the YAML rule options.
+`QueueNoEnqueueInTransactionPublisher` describe the YAML rule options, including
+optional `unanalyzable` (`report`, `advise`, or `ignore`).
 
 `query-reached-per-item` accepts `exemptCappedCursorPageReads` in the rule's
 YAML `options`, selected by `check({ root, config })` or an `analyzeProject()`

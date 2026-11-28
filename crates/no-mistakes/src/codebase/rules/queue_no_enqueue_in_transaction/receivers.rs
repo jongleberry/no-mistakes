@@ -123,9 +123,10 @@ pub(super) fn classify_builtin_site(
     if returned_or_typed_from_publisher(env, site) {
         return None;
     }
-    let this_chain = site.source_callee.starts_with("this.");
-    is_local_or_builtin_receiver(env, receiver, call.offset, this_chain, tx_owner, depth)
-        .then_some(builtin)
+    if env.file_facts.builtin_receiver_calls.contains(&call.offset) {
+        return Some(builtin);
+    }
+    is_local_or_builtin_receiver(env, receiver, call.offset, tx_owner, depth).then_some(builtin)
 }
 
 fn returned_or_typed_from_publisher(env: &FileEnv<'_>, site: &ResolvedCallSite) -> bool {
@@ -141,7 +142,6 @@ fn is_local_or_builtin_receiver(
     env: &FileEnv<'_>,
     expr: &ValueExpression,
     call_offset: u32,
-    this_chain: bool,
     tx_owner: CallableId,
     depth: u8,
 ) -> bool {
@@ -161,26 +161,18 @@ fn is_local_or_builtin_receiver(
                 && builtins::GLOBAL_STATIC_OBJECTS.contains(&name.as_str())
         }
         ValueExpression::Member(inner, _) => {
-            (this_chain && matches!(inner.as_ref(), ValueExpression::Unknown))
-                || is_local_or_builtin_receiver(
-                    env,
-                    inner,
-                    call_offset,
-                    this_chain,
-                    tx_owner,
-                    depth,
-                )
+            is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth)
         }
         ValueExpression::Array(..) => true,
         ValueExpression::Awaited(inner) => {
-            is_local_or_builtin_receiver(env, inner, call_offset, false, tx_owner, depth)
+            is_local_or_builtin_receiver(env, inner, call_offset, tx_owner, depth)
         }
         ValueExpression::Nullish(left, right)
         | ValueExpression::Default(left, right)
         | ValueExpression::Either(left, right) => {
             [left.as_ref(), right.as_ref()].into_iter().all(|arm| {
                 matches!(arm, ValueExpression::Null | ValueExpression::Undefined)
-                    || is_local_or_builtin_receiver(env, arm, call_offset, false, tx_owner, depth)
+                    || is_local_or_builtin_receiver(env, arm, call_offset, tx_owner, depth)
             })
         }
         ValueExpression::Derived(parts) => !parts.iter().any(|p| expr_is_import(p, &env.imports)),

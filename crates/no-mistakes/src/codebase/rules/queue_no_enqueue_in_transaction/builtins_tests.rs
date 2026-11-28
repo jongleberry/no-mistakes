@@ -74,6 +74,11 @@ fn builtin_classifiers_cover_globals_prototypes_and_non_builtins() {
         &imports
     ));
     assert!(!is_builtin_global_fn(&ValueExpression::Unknown, &imports));
+    assert!(!is_builtin_global_fn(
+        &ValueExpression::Member(std::sync::Arc::new(ValueExpression::Unknown), "abs".into()),
+        &imports
+    ));
+    assert!(global_target_callbacks("foo.bar").is_none());
     imports.insert("Boolean", &shadowed);
     assert!(!is_builtin_global_fn(&named_fn, &imports));
 }

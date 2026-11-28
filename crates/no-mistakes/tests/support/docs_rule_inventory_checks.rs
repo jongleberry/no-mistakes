@@ -230,3 +230,20 @@ fn postgres_no_duplicate_keyed_lookups_is_documented() {
         assert!(read(&root.join(path)).contains(rule), "{path}");
     }
 }
+
+#[test]
+fn transaction_enqueue_rule_is_documented_across_check_entry_points() {
+    let root = repo_root();
+    let rule = "queue-no-enqueue-in-transaction";
+    assert!(rule_ids_from_source(&root).contains(rule));
+    for path in [
+        "docs/rules/README.md",
+        "docs/configuration/rules.md",
+        "docs/cli/check.md",
+        "docs/node-api.md",
+        "docs/feature-parity.md",
+        "plugins/no-mistakes/skills/no-mistakes/SKILL.md",
+    ] {
+        assert!(read(&root.join(path)).contains(rule), "{path}");
+    }
+}

@@ -95,17 +95,11 @@ pub(super) const VALIDATORS: &[RuleValidator] = &[
             .map(drop)
     }),
     (rules::BASH_EMPTY_ARRAY_NOUNSET, |rule, _| {
-        rules::filesystem_dispatch::shell_compatibility::validate_options(
-            &rule.rule,
-            &rule.strict_rule_options()?,
-        )
-        .map(drop)
+        rules::shell_compatibility::validate_options(&rule.rule, &rule.strict_rule_options()?)
+            .map(drop)
     }),
     (rules::ZSH_READONLY_PARAMETER, |rule, _| {
-        rules::filesystem_dispatch::shell_compatibility::validate_options(
-            &rule.rule,
-            &rule.strict_rule_options()?,
-        )
-        .map(drop)
+        rules::shell_compatibility::validate_options(&rule.rule, &rule.strict_rule_options()?)
+            .map(drop)
     }),
 ];

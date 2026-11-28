@@ -1,4 +1,7 @@
 import { withTx } from './tx'
+import { enqueue } from '@sample/jobs'
+import * as selfNs from './self-ns'
+import { missingExport } from './tx'
 
 function getTextA(): string {
   return 'a'
@@ -8,10 +11,17 @@ function getTextB(): string {
   return 'b'
 }
 
-export function edgeCoverage(flag: boolean, fnFactory: () => () => void) {
+export function edgeCoverage(
+  flag: boolean,
+  fnFactory: () => () => void,
+  obj: { tag: (s: TemplateStringsArray) => string },
+  extra?: string[],
+) {
   let rep: unknown = 'x'
   rep = 'y'
-  return withTx(async () => {
+  const deepDerived = (((((rep as string) + '1') + '2') + '3') + '4') + '5'
+  const boundEnqueue = enqueue.bind(null)
+  return withTx(async (tx) => {
     const d0: number[] = []
     const d1 = d0
     const d2 = d1
@@ -22,6 +32,14 @@ export function edgeCoverage(flag: boolean, fnFactory: () => () => void) {
     d6.push(1)
     ;(flag ? getTextA : getTextB)().trim()
     fnFactory()()
-    return 'a'.replace('a', rep as string)
+    obj.tag`hello`
+    ;((selfNs as unknown as { a: string }).a + 'x').trim()
+    Math.abs.toString()
+    ;(() => {}).toString()
+    ;(flag ? extra : ['a'])?.map(tx.nested.handle)
+    ;(selfNs as unknown as { nested: () => void }).nested()
+    ;(missingExport as () => void)()
+    boundEnqueue({ id: '1' })
+    return 'a'.replace('a', rep as string).replace('a', deepDerived)
   })
 }

@@ -453,7 +453,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/coverage-paths.ts",
           "import": "<unknown>",
-          "line": 23,
+          "line": 33,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": ";(flag ? getTextA : getTextB)().trim()",
@@ -462,7 +462,7 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         {
           "file": "src/coverage-paths.ts",
           "import": "<unknown>",
-          "line": 24,
+          "line": 34,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "fnFactory()()",
@@ -470,11 +470,92 @@ source: crates/no-mistakes/tests/common/check_json_snapshot.rs
         },
         {
           "file": "src/coverage-paths.ts",
+          "import": "<unknown>.replace",
+          "line": 43,
+          "message": "built-in callback inside transaction cannot be proved not to publish; pass an inline callback or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "return 'a'.replace('a', rep as string).replace('a', deepDerived)",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "<unknown>.toString",
+          "line": 38,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(() => {}).toString()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "<unknown>.trim",
+          "line": 36,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";((selfNs as unknown as { a: string }).a + 'x').trim()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "boundEnqueue",
+          "line": 42,
+          "message": "Move this enqueue after the transaction commits. Return the job data from the callback and enqueue it after the transaction call resolves.",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "boundEnqueue({ id: '1' })",
+          "target": "@sample/jobs#enqueue"
+        },
+        {
+          "file": "src/coverage-paths.ts",
           "import": "d6.push",
-          "line": 22,
+          "line": 32,
           "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
           "rule": "queue-no-enqueue-in-transaction",
           "sourceLine": "d6.push(1)",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "missingExport",
+          "line": 41,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(missingExport as () => void)()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "missingExport",
+          "line": 41,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(missingExport as () => void)()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "obj.tag",
+          "line": 35,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": "obj.tag`hello`",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "selfNs.nested",
+          "line": 40,
+          "message": "unresolved call target inside transaction callback cannot be proved not to publish; use a statically resolvable call or move publishes after commit",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(selfNs as unknown as { nested: () => void }).nested()",
+          "target": "unanalyzable"
+        },
+        {
+          "file": "src/coverage-paths.ts",
+          "import": "selfNs.nested",
+          "line": 40,
+          "message": "unresolved call target may invoke a configured transaction (dynamic member, factory return, or wildcard re-export); import and call the transaction directly",
+          "rule": "queue-no-enqueue-in-transaction",
+          "sourceLine": ";(selfNs as unknown as { nested: () => void }).nested()",
           "target": "unanalyzable"
         },
         {

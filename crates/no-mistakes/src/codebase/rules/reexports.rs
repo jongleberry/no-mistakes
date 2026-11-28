@@ -1,5 +1,4 @@
 pub use super::advisory_rules::ADVISORY_RULE_IDS;
-pub use super::filesystem_dispatch::github_actions_run_command_policy;
 #[doc(hidden)]
 pub mod github_actions_no_poll_wait_job {
     pub use super::super::github_actions_workflow_files::no_poll_wait_job::{

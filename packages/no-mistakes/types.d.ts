@@ -52,6 +52,7 @@ export type * from "./postgres-explain-write-rollback-types";
 export type * from "./postgres-sql-statement-policy-types";
 export type * from "./postgres-lock-inventory-types";
 export type * from "./postgres-column-check-constraints-types";
+export type * from "./postgres-polymorphic-target-types";
 
 export type * from "./postgres-grouping-not-aggregation-types";
 export type * from "./postgres-duplicate-keyed-lookups-types";

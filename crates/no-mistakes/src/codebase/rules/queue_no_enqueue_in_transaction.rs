@@ -20,6 +20,12 @@ use options::{Api, Options};
 
 pub const RULE_ID: &str = "queue-no-enqueue-in-transaction";
 
+pub(crate) fn validate_options(rule: &crate::config::v2::schema::RuleDef) -> Result<()> {
+    rule.strict_rule_options::<options::Options>()?
+        .targets()
+        .map(drop)
+}
+
 pub(crate) fn check(
     root: &Path,
     config: &NoMistakesConfig,

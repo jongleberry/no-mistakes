@@ -184,7 +184,7 @@ pub struct ValueFlowFacts {
     pub widened_string_assertions: FxHashMap<u32, Vec<ValueType>>,
     pub returns: Vec<(CallableId, ValueExpression)>,
     pub calls: Vec<ValueCall>,
-    pub(crate) deferred_calls: FxHashSet<u32>,
+    pub deferred_calls: FxHashSet<u32>,
     pub type_exports: Vec<ExportedBinding>,
     pub type_shapes: FxHashMap<String, ValueType>,
     pub contextual_callbacks: FxHashMap<u32, ValueType>,
